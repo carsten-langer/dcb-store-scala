@@ -12,4 +12,6 @@ final case class Query[EventType](queryItems: immutable.Set[QueryItem[EventType]
 
 object Query:
 
+  def apply[EventType](queryItem: QueryItem[EventType]): Query[EventType] = Query(Set(queryItem))
+
   def all[EventType]: Query[EventType] = Query(Set.empty)

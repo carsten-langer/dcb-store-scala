@@ -5,3 +5,10 @@ package dcbstore
 import scala.collection.immutable
 
 final type Tags = immutable.Set[Tag]
+
+
+object Tags:
+
+  def apply(tag: Tag): Tags = Set(tag)
+
+  def empty: Tags = Set.empty
