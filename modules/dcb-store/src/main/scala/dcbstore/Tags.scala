@@ -11,4 +11,6 @@ object Tags:
 
   def apply(tag: Tag): Tags = Set(tag)
 
+  def apply(key: String, value: Int): Tags = apply(Tag(key, value.toString))
+
   def empty: Tags = Set.empty
