@@ -1,4 +1,6 @@
-package dcbstore
+package dcbstore.decisionmodel
+
+import dcbstore.{Event, Query, QueryItem, Tags}
 
 import scala.reflect.Typeable
 

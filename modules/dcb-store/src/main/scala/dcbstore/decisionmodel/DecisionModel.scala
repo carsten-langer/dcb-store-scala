@@ -1,7 +1,14 @@
-package dcbstore
+package dcbstore.decisionmodel
+
+import dcbstore.{AppendCondition, DcbStore, SequencedEvent}
 
 import scala.concurrent.{ExecutionContext, Future}
 
+/**
+ * Convenience methods and classes to build a decision model.
+ * It works with the convention that the value of the "Event Type" is derived from the type of the "Event Data" value.
+ * This is more specific than a general [[DcbStore]] requires.
+ */
 object DecisionModel:
 
   /**
