@@ -33,7 +33,7 @@ trait ProjectionBase[State, EventType]:
  */
 final case class Projection[State, EventType](
                                                override val initialState: State,
-                                               handlers: Map[EventType, PartialFunction[(State, Any), State]],
+                                               handlers: Map[EventType, PartialFunction[(State, EventType, Any), State]],
                                                tags: Tags = Tags.empty,
                                              )
   extends ProjectionBase[State, EventType]:
@@ -48,8 +48,8 @@ final case class Projection[State, EventType](
   override def apply(state: State, event: Event[EventType, Any]): State =
     handlers.get(event.eventType) match
       // A handlerPF exists, the tags match, and the handlerPF is defined for the data type.
-      case Some(handlerPF) if tags.subsetOf(event.tags) && handlerPF.isDefinedAt((state, event.data)) =>
-        handlerPF(state, event.data)
+      case Some(handlerPF) if tags.subsetOf(event.tags) && handlerPF.isDefinedAt((state, event.eventType, event.data)) =>
+        handlerPF(state, event.eventType, event.data)
       // Ignore the event, as no handlerPF found, tags mismatch, or data type mismatches.
       // Another projection should handle it.
       case _ => state
@@ -117,9 +117,9 @@ object Projection:
    * This way the resulting partial function is only defined for data of the correct type [[Data]], even if it can be
    * called with data of type [[Any]]. It is now the caller's responsibility to check before calling if the partial
    * function is defined for a given data type. As such, the type safety for the data type is guaranteed.
-   * The value of the "Event Type" of type [[EventType]] which was derived the "Event Data" type [[Data]] is not checked
-   * by the resulting partial function handlerPF. It is the caller's responsibility to only call the partial function
-   * handlerPF for events with the right "Event Type" value, else the bidirectional mapping is broken.
+   * In addition, the partial function verifies that it is called with the correct "Event Type" value of type
+   * [[EventType]] which was derived from the original [[Data]] type. This strengthens the bidirectional type safety of
+   * the projection between the "Event Data" type and the "Event Type" value.
    * The type of [[State]] however is not checked by the resulting partial function handlerPF, as the value is directly
    * forwarded to the non-partial function [[handlerF]]. It is the caller's responsibility to only call the partial
    * function handlerPF with a state of the correct type.
@@ -134,11 +134,14 @@ object Projection:
    */
   def handler[State, EventType, Data: Typeable](handlerF: (State, Data) => State)
                                                (using dataToEventType: DataToEventType[Data, EventType])
-  : (eventType: EventType, handlerPF: PartialFunction[(State, Any), State]) =
+  : (eventType: EventType, handlerPF: PartialFunction[(State, EventType, Any), State]) =
+    given CanEqual[EventType, EventType] = CanEqual.derived
+
+    val eventType = dataToEventType.eventType
     (
-      eventType = dataToEventType.eventType,
+      eventType = eventType,
       handlerPF = {
-        case (state: State, data: Data) => handlerF(state, data)
+        case (state: State, `eventType`, data: Data) => handlerF(state, data)
       },
     )
 
