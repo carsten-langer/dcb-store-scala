@@ -26,7 +26,7 @@ object DecisionModel:
    *         a query.
    */
   def buildDecisionModel[K, State, EventType](
-                                               dcbStore: DcbStore[EventType, ?],
+                                               dcbStore: DcbStore[EventType, ? <: Matchable],
                                                projections: Map[K, Projection[State, EventType]],
                                              )(using ExecutionContext)
   : Future[(
@@ -52,7 +52,7 @@ object DecisionModel:
    * Similar to [[buildDecisionModel()]] for multiple projections, but for a single projection.
    */
   def buildDecisionModel[State, EventType](
-                                            dcbStore: DcbStore[EventType, ?],
+                                            dcbStore: DcbStore[EventType, ? <: Matchable],
                                             projection: Projection[State, EventType],
                                           )(using ExecutionContext)
   : Future[(finalState: State, appendConditionO: Option[AppendCondition[EventType, dcbStore.SequencePosition]])] =
@@ -65,7 +65,7 @@ object DecisionModel:
    * Useful for ad-hoc synchronous read-only projections.
    */
   def buildReadModel[K, State, EventType](
-                                           dcbStore: DcbStore[EventType, ?],
+                                           dcbStore: DcbStore[EventType, ? <: Matchable],
                                            projections: Map[K, Projection[State, EventType]],
                                          )(using ExecutionContext): Future[Map[K, State]] =
     buildDecisionModel(dcbStore, projections).map(_.finalState)
@@ -75,13 +75,13 @@ object DecisionModel:
    * Useful for ad-hoc synchronous read-only projections.
    */
   def buildReadModel[K, State, EventType](
-                                           dcbStore: DcbStore[EventType, ?],
+                                           dcbStore: DcbStore[EventType, ? <: Matchable],
                                            projection: Projection[State, EventType],
                                          )(using ExecutionContext): Future[State] =
     buildDecisionModel(dcbStore, projection).map(_.finalState)
 
 
-extension [EventType](dcbStore: DcbStore[EventType, ?])
+extension [EventType](dcbStore: DcbStore[EventType, ? <: Matchable])
   def buildDecisionModel[K, State](projections: Map[K, Projection[State, EventType]])
                                   (using ExecutionContext)
   : Future[(
@@ -90,18 +90,18 @@ extension [EventType](dcbStore: DcbStore[EventType, ?])
   )] =
     DecisionModel.buildDecisionModel(dcbStore, projections)
 
-extension [EventType](dcbStore: DcbStore[EventType, ?])
+extension [EventType](dcbStore: DcbStore[EventType, ? <: Matchable])
   def buildDecisionModel[State](projection: Projection[State, EventType])
                                (using ExecutionContext)
   : Future[(finalState: State, appendConditionO: Option[AppendCondition[EventType, dcbStore.SequencePosition]])] =
     DecisionModel.buildDecisionModel(dcbStore, projection)
 
-extension [EventType](dcbStore: DcbStore[EventType, ?])
+extension [EventType](dcbStore: DcbStore[EventType, ? <: Matchable])
   def buildReadModel[K, State](projections: Map[K, Projection[State, EventType]])
                               (using ExecutionContext): Future[Map[K, State]] =
     DecisionModel.buildReadModel(dcbStore, projections)
 
-extension [State, EventType](dcbStore: DcbStore[EventType, ?])
+extension [State, EventType](dcbStore: DcbStore[EventType, ? <: Matchable])
   def buildReadModel(projection: Projection[State, EventType])
                     (using ExecutionContext): Future[State] =
     DecisionModel.buildReadModel(dcbStore, projection)
