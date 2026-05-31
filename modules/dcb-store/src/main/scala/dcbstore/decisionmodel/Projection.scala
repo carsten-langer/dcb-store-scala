@@ -13,7 +13,7 @@ trait ProjectionBase[State, EventType]:
 
   def queryO: Option[Query[EventType]]
 
-  def apply(state: State, event: Event[EventType, Matchable]): State
+  def apply(state: State, event: Event[EventType, Any]): State
 
 
 /**
@@ -26,8 +26,8 @@ trait ProjectionBase[State, EventType]:
  * @param handlers     A map of event types to handlers, i.e. partial functions that transform the state.
  *                     See [[Projection.handler()]] for creating such handlers.
  *                     The handlers will use the same state but may have different data types. Thus, in parameter
- *                     [[handlers]], the data type is [[Matchable]]. However, it is expected that the correct data type
- *                     is baked into each partial function, and that it matches the corresponding event type. This will
+ *                     [[handlers]], the data type is [[Any]]. However, it is expected that the correct data type is
+ *                     baked into each partial function, and that it matches the corresponding event type. This will
  *                     be tested via "isDefinedAt()" at runtime before calling the handler.
  * @param tags         The tags for this projection.
  * @tparam State     The type of the projection's state.
@@ -35,7 +35,7 @@ trait ProjectionBase[State, EventType]:
  */
 final case class Projection[State, EventType](
                                                override val initialState: State,
-                                               handlers: Map[EventType, PartialFunction[(State, EventType, Matchable), State]],
+                                               handlers: Map[EventType, PartialFunction[(State, EventType, Any), State]],
                                                tags: Tags = Tags.empty,
                                              )
   extends ProjectionBase[State, EventType]:
@@ -47,7 +47,7 @@ final case class Projection[State, EventType](
     val eventTypes = handlers.keySet
     Option.unless(eventTypes.isEmpty)(Query(QueryItem(eventTypes, tags)))
 
-  override def apply(state: State, event: Event[EventType, Matchable]): State =
+  override def apply(state: State, event: Event[EventType, Any]): State =
     handlers.get(event.eventType) match
       // A handlerPF exists, the tags match, and the handlerPF is defined for the data type.
       case Some(handlerPF) if tags.subsetOf(event.tags) && handlerPF.isDefinedAt((state, event.eventType, event.data)) =>
@@ -88,7 +88,7 @@ final case class ComposedProjection[K, State, EventType](projections: Map[K, Pro
       val maybeMergedQuery = definedQueries.reduceOption(_.merge(_))
       maybeMergedQuery
 
-  override def apply(state: Map[K, State], event: Event[EventType, Matchable]): Map[K, State] =
+  override def apply(state: Map[K, State], event: Event[EventType, Any]): Map[K, State] =
     if queryO.exists(_.matches(event))
     then
       projections.map: (key, projection) =>
@@ -111,14 +111,14 @@ object Projection:
    * type [[Data]] into a new state. It derives from it the "Event Type" value of type [[EventType]] for that
    * "Event Data" type [[Data]] and a partial function that can be used process events, see [[Projection]].
    * Specifically, this handler method transforms the given non-partial function [[handlerF]] strongly typed for
-   * [[Data]] into a partial function handlerPF suitable for processing events of data type [[Matchable]].
-   * Having [[Matchable]] as the data type in the resulting partial function signature allows combining several handlers
-   * with different data types into a single projection, see [[Projection]].
-   * As the data type in the resulting partial function is [[Matchable]], the data type [[Data]] must have a type test
+   * [[Data]] into a partial function handlerPF suitable for processing events of data type [[Any]].
+   * Having [[Any]] as the data type in the resulting partial function signature allows combining several handlers with
+   * different data types into a single projection, see [[Projection]].
+   * As the data type in the resulting partial function is [[Any]], the data type [[Data]] must have a type test
    * [[Typeable.unapply()]] that can be used at runtime to check if the given data type is the correct type.
    * This way the resulting partial function is only defined for data of the correct type [[Data]], even if it can be
-   * called with data of type [[Matchable]]. It is now the caller's responsibility to check before calling if the
-   * partial function is defined for a given data type. As such, the type safety for the data type is guaranteed.
+   * called with data of type [[Any]]. It is now the caller's responsibility to check before calling if the partial
+   * function is defined for a given data type. As such, the type safety for the data type is guaranteed.
    * In addition, the partial function verifies that it is called with the correct "Event Type" value of type
    * [[EventType]] which was derived from the original [[Data]] type. This strengthens the bidirectional type safety of
    * the projection between the "Event Data" type and the "Event Type" value.
@@ -136,7 +136,7 @@ object Projection:
    */
   def handler[State, EventType, Data: Typeable](handlerF: (State, Data) => State)
                                                (using dataToEventType: DataToEventType[Data, EventType])
-  : (eventType: EventType, handlerPF: PartialFunction[(State, EventType, Matchable), State]) =
+  : (eventType: EventType, handlerPF: PartialFunction[(State, EventType, Any), State]) =
     given CanEqual[EventType, EventType] = CanEqual.derived
 
     val eventType = dataToEventType.eventType
