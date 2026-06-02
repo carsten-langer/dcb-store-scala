@@ -1,6 +1,6 @@
 package dcbstore.decisionmodel
 
-import dcbstore.{AppendCondition, DcbStore, SequencedEvent}
+import dcbstore.{AppendCondition, DcbStore}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -12,7 +12,39 @@ import scala.concurrent.{ExecutionContext, Future}
 object DecisionModel:
 
   /**
-   * Projects the events of a given [[DcbStore]] into the combined state of given [[Projection]]s.
+   * Projects the events of a given [[DcbStore]] into the state of a given [[Projection]].
+   *
+   * @param dcbStore   The [[DcbStore]] to read events from. As the store's _Data_ type is opaque to the projections, a
+   *                   type wildcard is used here.
+   * @param projection The projection.
+   * @tparam State     A type of the projection state.
+   * @tparam EventType The type of the events' event type.
+   * @return A [[Future]] that resolves to the projection's state, and an optional [[AppendCondition]] that can
+   *         be used for appending events to the store. The [[AppendCondition]] is only set if the projection involved
+   *         a query.
+   */
+  def buildDecisionModel[State, EventType](
+                                            dcbStore: DcbStore[EventType, ?],
+                                            projection: Projection[State, EventType],
+                                          )(using ExecutionContext)
+  : Future[(finalState: State, appendConditionO: Option[AppendCondition[EventType, dcbStore.SequencePosition]])] =
+    val initialState = projection.initialState
+    val resultForEmptyQuery = Future.successful((finalState = initialState, appendConditionO = None))
+    projection.queryO.fold(resultForEmptyQuery): query =>
+      for
+        sequencedEvents <- dcbStore.read(query)
+        acc0 = (state = initialState, lastSequencePositionO = Option.empty[dcbStore.SequencePosition])
+        (state, lastSequencePositionO) = sequencedEvents.iterator.foldLeft(acc0): (acc, sequencedEvent) =>
+          val newState = projection(acc.state, sequencedEvent.event)
+          val newLastSequencePositionO = Some(sequencedEvent.sequencePosition)
+          (newState, newLastSequencePositionO)
+      yield
+        (finalState = state, appendConditionO = Some(AppendCondition(query, lastSequencePositionO)))
+
+  /**
+   * Projects the events of a given [[DcbStore]] into the combined state of multiple given [[Projection]]s.
+   * Convenience method to first build a composed projection and second use it with [[buildDecisionModel()]].
+   * Also reminds that the finalState of a composed projection is a map with the same keys as the projections.
    *
    * @param dcbStore    The [[DcbStore]] to read events from. As the store's _Data_ type is opaque to the projections, a
    *                    type wildcard is used here.
@@ -34,45 +66,12 @@ object DecisionModel:
     appendConditionO: Option[AppendCondition[EventType, dcbStore.SequencePosition]],
   )] =
     val composedProjection = ComposedProjection(projections)
-    val composedInitialState = composedProjection.initialState
-    val resultO = composedProjection.queryO.map: query =>
-      for
-        sequencedEvents <- dcbStore.read(query)
-      yield
-        var state: Map[K, State] = composedInitialState
-        var lastSequencePositionO: Option[dcbStore.SequencePosition] = None
-        sequencedEvents.iterator.foreach:
-          case SequencedEvent(event, sequencePosition) =>
-            state = composedProjection.apply(state, event)
-            lastSequencePositionO = Some(sequencePosition)
-        (state, Some(AppendCondition(query, lastSequencePositionO)))
-    resultO.getOrElse(Future.successful((composedInitialState, None)))
+    // The IDE may indicate this call to be recursive, this is a wrong indication.
+    buildDecisionModel(dcbStore, composedProjection)
 
   /**
-   * Similar to [[buildDecisionModel()]] for multiple projections, but for a single projection.
-   */
-  def buildDecisionModel[State, EventType](
-                                            dcbStore: DcbStore[EventType, ?],
-                                            projection: Projection[State, EventType],
-                                          )(using ExecutionContext)
-  : Future[(finalState: State, appendConditionO: Option[AppendCondition[EventType, dcbStore.SequencePosition]])] =
-    val key = "TheKey"
-    buildDecisionModel(dcbStore, Map(key -> projection)).map:
-      (finalStateMap, appendConditionO) => (finalStateMap(key), appendConditionO)
-
-  /**
-   * Similar to [[buildDecisionModel()]] for multiple projections, but returns only the final state of the projections.
-   * Useful for ad-hoc synchronous read-only projections.
-   */
-  def buildReadModel[K, State, EventType](
-                                           dcbStore: DcbStore[EventType, ?],
-                                           projections: Map[K, Projection[State, EventType]],
-                                         )(using ExecutionContext): Future[Map[K, State]] =
-    buildDecisionModel(dcbStore, projections).map(_.finalState)
-
-  /**
-   * Similar to [[buildDecisionModel()]] for a single projection, but returns only the final state of the projection.
-   * Useful for ad-hoc synchronous read-only projections.
+   * Convenience method similar to [[buildDecisionModel()]] for a projection, but returns only the final state of the
+   * projection. Useful for ad-hoc synchronous read-only projections.
    */
   def buildReadModel[K, State, EventType](
                                            dcbStore: DcbStore[EventType, ?],
@@ -80,6 +79,23 @@ object DecisionModel:
                                          )(using ExecutionContext): Future[State] =
     buildDecisionModel(dcbStore, projection).map(_.finalState)
 
+  /**
+   * Convenience method similar to [[buildDecisionModel()]] for multiple projections, but returns only the final state
+   * of the projections. Useful for ad-hoc synchronous read-only projections.
+   */
+  def buildReadModel[K, State, EventType](
+                                           dcbStore: DcbStore[EventType, ?],
+                                           projections: Map[K, Projection[State, EventType]],
+                                         )(using ExecutionContext): Future[Map[K, State]] =
+    buildDecisionModel(dcbStore, projections).map(_.finalState)
+
+
+// Convenience extensions to call the buildDecisionModel() etc. methods directly on a DcbStore.
+extension [EventType](dcbStore: DcbStore[EventType, ?])
+  def buildDecisionModel[State](projection: Projection[State, EventType])
+                               (using ExecutionContext)
+  : Future[(finalState: State, appendConditionO: Option[AppendCondition[EventType, dcbStore.SequencePosition]])] =
+    DecisionModel.buildDecisionModel(dcbStore, projection)
 
 extension [EventType](dcbStore: DcbStore[EventType, ?])
   def buildDecisionModel[K, State](projections: Map[K, Projection[State, EventType]])
@@ -90,18 +106,12 @@ extension [EventType](dcbStore: DcbStore[EventType, ?])
   )] =
     DecisionModel.buildDecisionModel(dcbStore, projections)
 
-extension [EventType](dcbStore: DcbStore[EventType, ?])
-  def buildDecisionModel[State](projection: Projection[State, EventType])
-                               (using ExecutionContext)
-  : Future[(finalState: State, appendConditionO: Option[AppendCondition[EventType, dcbStore.SequencePosition]])] =
-    DecisionModel.buildDecisionModel(dcbStore, projection)
+extension [State, EventType](dcbStore: DcbStore[EventType, ?])
+  def buildReadModel(projection: Projection[State, EventType])
+                    (using ExecutionContext): Future[State] =
+    DecisionModel.buildReadModel(dcbStore, projection)
 
 extension [EventType](dcbStore: DcbStore[EventType, ?])
   def buildReadModel[K, State](projections: Map[K, Projection[State, EventType]])
                               (using ExecutionContext): Future[Map[K, State]] =
     DecisionModel.buildReadModel(dcbStore, projections)
-
-extension [State, EventType](dcbStore: DcbStore[EventType, ?])
-  def buildReadModel(projection: Projection[State, EventType])
-                    (using ExecutionContext): Future[State] =
-    DecisionModel.buildReadModel(dcbStore, projection)
