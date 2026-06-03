@@ -5,27 +5,27 @@ import dcbstore.{Event, Query, QueryItem, Tags}
 import scala.reflect.Typeable
 
 /**
- * Creates a projection from several handlers all working on a single common state, combined with a common initial state
- * and tags. This allows building a single [[QueryItem]] from all event types and the given tags. Implements the
- * [[queryO]] property for the resulting [[Query]] (or no query if [[handlers]] is empty) to fetch events of the correct
- * types and tags. Implements the [[apply()]] method to apply the handlers to a given state and event.
+ * A projection combining several projection functions (handlers) working on a single common state and a single set of
+ * tags. This allows building a single [[QueryItem]] from all event types and the given tags. Implements the [[queryO]]
+ * property for the resulting [[Query]] (or no query if [[handlers]] is empty) to fetch events of the correct types and
+ * tags. Implements the [[updatedProjection()]] method to apply the handlers to a given event and the current state.
  *
- * @param initialState The common initial state of this projection.
- * @param handlers     A map of event types to handlers, i.e. functions that transform the state.
- *                     See [[SingleProjection.handler()]] for creating such handlers.
+ * @param state    The current state of this projection, common for all handlers.
+ * @param handlers A map of event types to handlers, i.e. functions that transform the state.
+ *                 See [[SingleProjection.handler()]] for creating such handlers.
  *
- *                     The handlers will use the same state but may have different data types. Actually, the type of
- *                     "Event Data" should remain opaque to the processing of events, like here in [[apply()]]. Thus, in
- *                     parameter [[handlers]], the data type is [[Any]]. It is expected that the correct data type is
- *                     baked into each function, and that each function only creates a new state from the event if both
- *                     the event type value and the event data type match. Else it is expected that the function returns
- *                     the state unchanged.
- * @param tags         The tags for this projection.
+ *                 The handlers will use the same state but may have different data types. Actually, the type of
+ *                 "Event Data" should remain opaque to the processing of events, like here in [[updatedProjection()]].
+ *                 Thus, in parameter [[handlers]], the data type is [[Any]]. It is expected that the correct data type
+ *                 is baked into each function, and that each function only creates a new state from the event if both
+ *                 the event type value and the event data type match. Else it is expected that the function returns
+ *                 the state unchanged.
+ * @param tags     The tags for this projection.
  * @tparam State     The type of the projection's state.
  * @tparam EventType The type of the events' event type.
  */
 final case class SingleProjection[State, EventType](
-                                                     override val initialState: State,
+                                                     override val state: State,
                                                      handlers: Map[EventType, (state: State, event: (EventType, Any)) => State],
                                                      tags: Tags = Tags.empty,
                                                    )
@@ -38,13 +38,13 @@ final case class SingleProjection[State, EventType](
     val eventTypes = handlers.keySet
     Option.unless(eventTypes.isEmpty)(Query(QueryItem(eventTypes, tags)))
 
-  override def apply(state: State, event: Event[EventType, Any]): State =
+  override def updatedProjection(event: Event[EventType, Any]): Projection[State, EventType] =
     handlers.get(event.eventType) match
       // A handlerF exists and the tags match.
       case Some(handlerF) if tags.subsetOf(event.tags) =>
-        handlerF(state, (event.eventType, event.data))
+        copy(state = handlerF(state, (event.eventType, event.data)))
       // Ignore the event, as no handlerF found or tags mismatch.
-      case _ => state
+      case _ => this
 
 
 object SingleProjection:

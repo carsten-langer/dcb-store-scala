@@ -28,18 +28,18 @@ object DecisionModel:
                                             projection: Projection[State, EventType],
                                           )(using ExecutionContext)
   : Future[(finalState: State, appendConditionO: Option[AppendCondition[EventType, dcbStore.SequencePosition]])] =
-    val initialState = projection.initialState
-    val resultForEmptyQuery = Future.successful((finalState = initialState, appendConditionO = None))
+    val resultForEmptyQuery = Future.successful((finalState = projection.state, appendConditionO = None))
     projection.queryO.fold(resultForEmptyQuery): query =>
       for
         sequencedEvents <- dcbStore.read(query)
-        acc0 = (state = initialState, lastSequencePositionO = Option.empty[dcbStore.SequencePosition])
-        (state, lastSequencePositionO) = sequencedEvents.iterator.foldLeft(acc0): (acc, sequencedEvent) =>
-          val newState = projection(acc.state, sequencedEvent.event)
+        acc0 = (projection = projection, lastSequencePositionO = Option.empty[dcbStore.SequencePosition])
+        (finalProjection, lastSequencePositionO) = sequencedEvents.iterator.foldLeft(acc0): (acc, sequencedEvent) =>
+          val oldProjection = acc.projection
+          val newProjection = oldProjection.updatedProjection(sequencedEvent.event)
           val newLastSequencePositionO = Some(sequencedEvent.sequencePosition)
-          (newState, newLastSequencePositionO)
+          (newProjection, newLastSequencePositionO)
       yield
-        (finalState = state, appendConditionO = Some(AppendCondition(query, lastSequencePositionO)))
+        (finalState = finalProjection.state, appendConditionO = Some(AppendCondition(query, lastSequencePositionO)))
 
   /**
    * Projects the events of a given [[DcbStore]] into the combined state of multiple given [[Projection]]s.
