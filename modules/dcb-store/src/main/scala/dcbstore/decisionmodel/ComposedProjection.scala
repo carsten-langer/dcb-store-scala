@@ -24,24 +24,20 @@ final case class ComposedProjection[K, State, EventType](projections: Map[K, Pro
   // However, a Query with empty queryItems is allowed and means to fetch all events.
   // Thus, if no projections are given, we explicitly return no Query.
   override val queryO: Option[Query[EventType]] =
-    if projections.isEmpty
-    then
-      None
-    else
-      val maybeQueries = projections.values.map(_.queryO)
-      val definedQueries = maybeQueries.flatten
+    Option.unless(projections.isEmpty)(projections.values).flatMap: ps =>
+      val definedQueries = ps.flatMap(_.queryO)
       val maybeMergedQuery = definedQueries.reduceOption(_.merge(_))
       maybeMergedQuery
 
   override def apply(state: Map[K, State], event: Event[EventType, Any]): Map[K, State] =
-    if queryO.exists(_.matches(event))
-    then
-      projections.map: (key, projection) =>
-        // For correct usage of this apply() method, the state map must be consistent to the original projections map.
-        // If the following Map.apply() fails this indicates a usage error of this ComposedProjection.apply() method.
-        // We rather throw an error than to hide this problem.
-        val oldState = state(key)
-        val newState = projection(oldState, event)
-        (key, newState)
-    else
-      state
+    queryO match
+      case Some(query) if query.matches(event) =>
+        projections.map: (key, projection) =>
+          // For correct usage of this apply() method, the state map must be consistent to the original projections map.
+          // If the following Map.apply() fails this indicates a usage error of this ComposedProjection.apply() method.
+          // We rather throw an error than to hide this problem.
+          val oldState = state(key)
+          val newState = projection(oldState, event)
+          (key, newState)
+      case _ => state
+
