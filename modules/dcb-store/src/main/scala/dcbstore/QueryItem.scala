@@ -12,3 +12,8 @@ final case class QueryItem[EventType](eventTypes: immutable.Set[EventType], tags
     val eventTypeMatches = eventTypes.isEmpty || eventTypes.contains(event.eventType)
     val tagsMatch = tags.subsetOf(event.tags)
     eventTypeMatches && tagsMatch
+
+
+object QueryItem:
+
+  def apply[EventType](eventType: EventType, tags: Tags): QueryItem[EventType] = QueryItem(Set(eventType), tags)
