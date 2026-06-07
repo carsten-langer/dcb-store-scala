@@ -10,24 +10,30 @@ import scala.reflect.Typeable
  * to fetch events of the correct types and tags as encoded in the [[QueryItem]]s. Implements the
  * [[updatedProjection()]] method to apply the handlers to a given event and the current state.
  *
- * @param state    The current state of this projection, common for all handlers.
- * @param handlers A map of [[QueryItem]]s to handler functions that transform the state.
- *                 See [[SingleProjection.handler()]] for creating such handlers.
+ * @param internalState     The current internal state of this projection, common for all handlers.
+ * @param handlers          A map of [[QueryItem]]s to handler functions that transform the internal state.
+ *                          See [[SingleProjection.handler()]] for creating such handlers.
  *
- *                 The handlers will use the same state but may have different data types. Actually, the type of
- *                 "Event Data" should remain opaque to the processing of events, like here in [[updatedProjection()]].
- *                 Thus, in parameter [[handlers]], the data type is [[Any]]. It is expected that the correct data type
- *                 is baked into each function, and that each function only creates a new state from the event if both
- *                 the event type value and the event data type match. Else it is expected that the function returns
- *                 the state unchanged.
+ *                          The handlers will use the same state but may have different data types. Actually, the type
+ *                          of "Event Data" should remain opaque to the processing of events, like here in
+ *                          [[updatedProjection()]]. Thus, in parameter [[handlers]], the data type is [[Any]]. It is
+ *                          expected that the correct data type is baked into each function, and that each function only
+ *                          creates a new state from the event if both the event type value and the event data type
+ *                          match. Else it is expected that the function returns the state unchanged.
+ * @param finalStateMapperF An optional function to map the internal state to the final state.
  * @tparam State     The type of the projection's state.
  * @tparam EventType The type of the events' event type.
  */
-final case class SingleProjection[State, EventType](
-                                                     override val state: State,
-                                                     handlers: Map[QueryItem[EventType], (state: State, event: (EventType, Any)) => State],
-                                                   )
+final case class SingleProjection[InternalState, State, EventType](
+                                                                    internalState: InternalState,
+                                                                    handlers: Map[QueryItem[EventType], (state: InternalState, event: (EventType, Any)) => InternalState],
+                                                                    finalStateMapperF: InternalState => State = identity[InternalState],
+                                                                  )
   extends Projection[State, EventType]:
+
+  // Must be def rather than val to not call the internalState too early, in case the finalStateMapperF fails on
+  // intermediate state due to caller-side business logic.
+  override def state: State = finalStateMapperF(internalState)
 
   // If no handlers are given, there is no point in fetching events, as no handler would update the state.
   // However, a Query with empty QueryItems is allowed and means to fetch all events.
@@ -39,7 +45,7 @@ final case class SingleProjection[State, EventType](
   override def updatedProjection(event: Event[EventType, Any]): Projection[State, EventType] =
     handlers.foldLeft(this):
       case (projection, (queryItem, handlerF)) if queryItem.matches(event) =>
-        projection.copy(state = handlerF(state, (event.eventType, event.data)))
+        projection.copy(internalState = handlerF(internalState, (event.eventType, event.data)))
       case (projection, _) => projection
 
 

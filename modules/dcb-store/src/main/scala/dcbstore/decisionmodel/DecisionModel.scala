@@ -28,7 +28,9 @@ object DecisionModel:
                                             projection: Projection[State, EventType],
                                           )(using ExecutionContext)
   : Future[(finalState: State, appendConditionO: Option[AppendCondition[EventType, dcbStore.SequencePosition]])] =
-    val resultForEmptyQuery = Future.successful((finalState = projection.state, appendConditionO = None))
+    // Must be a def rather than a val to not break the as-reference semantic in fold(ifEmpty: => B).
+    def resultForEmptyQuery = Future.successful((finalState = projection.state, appendConditionO = None))
+
     projection.queryO.fold(resultForEmptyQuery): query =>
       for
         sequencedEvents <- dcbStore.read(query)

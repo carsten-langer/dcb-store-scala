@@ -18,7 +18,9 @@ import dcbstore.{Event, Query}
 final case class ComposedProjection[K, State, EventType](projections: Map[K, Projection[State, EventType]])
   extends Projection[Map[K, State], EventType]:
 
-  override val state: Map[K, State] = projections.view.mapValues(_.state).toMap
+  // Is def rather than val to not call the projections' states too early, in case down the line some SingleProjection
+  // has a finalStateMapperF which fails on intermediate state due to caller-side business logic.
+  override def state: Map[K, State] = projections.view.mapValues(_.state).toMap
 
   // If no projections are given, there is no point in fetching events, as no projection would update the state.
   // However, a Query with empty queryItems is allowed and means to fetch all events.
