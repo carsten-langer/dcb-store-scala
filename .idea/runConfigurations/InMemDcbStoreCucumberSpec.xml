@@ -1,0 +1,18 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="InMemDcbStoreCucumberSpec" type="JUnit" factoryName="JUnit" nameIsGenerated="true">
+    <module name="dcb-store-scala.dcb-store-inmem.test" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="cucumber.dcbstore.inmemdcbstore.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <option name="PACKAGE_NAME" value="cucumber.dcbstore.inmemdcbstore" />
+    <option name="MAIN_CLASS_NAME" value="cucumber.dcbstore.inmemdcbstore.InMemDcbStoreCucumberSpec" />
+    <option name="METHOD_NAME" value="" />
+    <option name="TEST_OBJECT" value="class" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

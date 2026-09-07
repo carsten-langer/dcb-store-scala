@@ -59,9 +59,9 @@ object DecisionModel:
    *         a query.
    */
   def buildDecisionModel[State, EventType](
-                                               dcbStore: DcbStore[EventType, ?],
-                                               projections: Iterable[Projection[State, EventType]],
-                                             )(using ExecutionContext)
+                                            dcbStore: DcbStore[EventType, ?],
+                                            projections: Iterable[Projection[State, EventType]],
+                                          )(using ExecutionContext)
   : Future[(
     finalState: Iterable[State],
     appendConditionO: Option[AppendCondition[EventType, dcbStore.SequencePosition]],
@@ -75,9 +75,9 @@ object DecisionModel:
    * projection. Useful for ad-hoc synchronous read-only projections.
    */
   def buildReadModel[State, EventType](
-                                           dcbStore: DcbStore[EventType, ?],
-                                           projection: Projection[State, EventType],
-                                         )(using ExecutionContext): Future[State] =
+                                        dcbStore: DcbStore[EventType, ?],
+                                        projection: Projection[State, EventType],
+                                      )(using ExecutionContext): Future[State] =
     buildDecisionModel(dcbStore, projection).map(_.finalState)
 
   /**
