@@ -55,7 +55,7 @@ root (.)             pure aggregator, publish / skip := true
 The sliceworkz-eventstore adapter is deliberately **not** here — it lives in the separate
 `dcb-store-sw-eventstore` repo, because it links an LGPL-3.0 library that transitively brings
 Jackson and Micrometer. Keeping that out is the whole point of the split, and it is what lets
-`dcb-store` be licensed permissively with no copyleft interaction. Do not add third-party compile
+`dcb-store` be licensed under Apache 2.0 with no copyleft interaction. Do not add third-party compile
 dependencies to `dcb-store`; that invariant is checkable with
 `sbt "show dcbStore / Compile / libraryDependencies"` (expect only `scala3-library`).
 
@@ -126,7 +126,12 @@ entry in the `testInMem` alias.
 
 ## Publishing
 
-Local only for now: no Sonatype, no PGP, no CI, no `LICENSE` file yet. `sbt publishLocal` writes to
+Licensed under Apache 2.0: `LICENSE` holds the verbatim license text, `NOTICE` the copyright line
+and third-party attributions, and `ThisBuild / licenses` puts it into the published POM. `commonSettings` copies both files into
+`META-INF/` of every published binary and sources jar. Keep
+`NOTICE` up to date when adding or removing dependencies.
+
+Local only for now: no Sonatype, no PGP, no CI. `sbt publishLocal` writes to
 the Ivy local repository — trust the `[info] published … to …` log lines for the exact path rather
 than assuming `~/.ivy2`, since `sbt.ivy.home` may be overridden (it is on the original machine).
 

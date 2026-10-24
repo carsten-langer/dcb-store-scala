@@ -8,6 +8,9 @@ ThisBuild / organization := "de.carsten-langer"
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
+// Written into the published POM / ivy.xml. See the LICENSE and NOTICE files.
+ThisBuild / licenses := Seq(License.Apache2)
+
 // All versions: https://www.scala-lang.org/download/all.html
 // Scala 3.7 is the hard minimum for this code base, i.e. 3.3 LTS is NOT reachable without an API
 // redesign:
@@ -31,7 +34,14 @@ lazy val commonSettings = Def.settings(
   // Until the Scaladoc is warning-clean, do not publish a doc jar.
   // Alternative: Compile / doc / scalacOptions -= "-Werror".
   Compile / packageDoc / publishArtifact := false,
+  // Ship the Apache 2.0 LICENSE and the NOTICE in every published jar, as the license asks for.
+  Compile / packageBin / mappings ++= licenseMappings.value,
+  Compile / packageSrc / mappings ++= licenseMappings.value,
 )
+lazy val licenseMappings = Def.setting {
+  val root = (LocalRootProject / baseDirectory).value
+  Seq(root / "LICENSE" -> "META-INF/LICENSE", root / "NOTICE" -> "META-INF/NOTICE")
+}
 
 
 ////////////////////////////////////////

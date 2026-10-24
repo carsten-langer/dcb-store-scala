@@ -140,3 +140,10 @@ Scaladoc inherits `-Werror` and the sources contain unresolved `[[links]]`.
 
 This source code is extracted from a (currently non-public) Play app supporting the (public)
 [HealthCareDay](https://github.com/carsten-langer/HealthCareDay), with the history of the extracted files preserved.
+
+## License
+
+Copyright 2026 Carsten Langer.
+
+Licensed under the [Apache License, Version 2.0](LICENSE). See [NOTICE](NOTICE) for third-party
+attributions.

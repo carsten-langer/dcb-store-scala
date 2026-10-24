@@ -1,3 +1,8 @@
+dcb-store-scala
+Copyright 2026 Carsten Langer
+
+This product is licensed under the Apache License, Version 2.0, see the LICENSE file.
+
 This product includes software developed by third parties:
 
 - Scala (https://www.scala-lang.org/) - licensed under Apache 2.0 License
@@ -19,3 +24,5 @@ Note that the dcb-store module itself has no third-party compile dependencies at
 
 Many ideas are taken from https://dcb.events/ and the example implementation in TypeScript at
 https://github.com/dcb-events/dcb-events.github.io/tree/main/libraries/dcb
+- documentation - licensed under the Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)
+- code examples - licensed under MIT License
