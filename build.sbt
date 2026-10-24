@@ -65,7 +65,7 @@ lazy val dcbStoreTestkit = (project in file("modules/dcb-store-testkit"))
       // dcbStoreTestkit module, as DcbStoreStepDefinitions extends ScalaDsl/EN (cucumber-scala)
       // and ScalaFutures/IntegrationPatience/Matchers/TryValues (scalatest).
       // https://github.com/cucumber/cucumber-jvm-scala/releases
-      "io.cucumber" %% "cucumber-scala" % "8.39.1",
+      "io.cucumber" %% "cucumber-scala" % "9.2.1",
       // https://www.scalatest.org/release_notes
       "org.scalatest" %% "scalatest" % "3.2.20",
     ),
@@ -85,7 +85,12 @@ lazy val dcbStoreTestkit = (project in file("modules/dcb-store-testkit"))
 lazy val cucumberSbtIntegrationSettingsForTest = Def.settings(
   libraryDependencies ++= Seq(
     // https://github.com/cucumber/cucumber-jvm/tree/main/cucumber-junit-platform-engine
-    "io.cucumber" % "cucumber-junit-platform-engine" % "7.34.4" % Test,
+    "io.cucumber" % "cucumber-junit-platform-engine" % "8.0.4" % Test,
+    // Cucumber (JVM) 8 needs a JSON library on the classpath to write its reports, and accepts either
+    // Jackson 2 (databind + datatype-jdk8) or Jackson 3. Test-scoped only, so dcb-store stays
+    // free of third-party compile dependencies.
+    // https://github.com/FasterXML/jackson-databind/tree/3.x
+    "tools.jackson.core" % "jackson-databind" % "3.2.4" % Test,
     // https://github.com/junit-team/junit-framework/tree/main/junit-platform-suite
     "org.junit.platform" % "junit-platform-suite" % JupiterKeys.junitPlatformVersion.value % Test,
     // https://github.com/sbt/sbt-jupiter-interface

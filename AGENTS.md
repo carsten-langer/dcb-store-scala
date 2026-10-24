@@ -77,6 +77,13 @@ thing to understand here:
 - Each implementation supplies a concrete subclass plus an empty runner class annotated
   `@Suite @IncludeEngines("cucumber") @SelectClasspathResource("cucumber/dcbstore/DcbStore.feature")`
   with `GLUE_PROPERTY_NAME` pointing at its own package.
+- Cucumber (JVM) 8 needs a **JSON library on the test classpath** for its serialising report plugins
+  (this repo's runner configures `html:`), otherwise the run fails with
+  "Cucumber needs a JSON library to write reports". It accepts Jackson 3
+  (`tools.jackson.core:jackson-databind`) or Jackson 2 (`jackson-databind` + `jackson-datatype-jdk8`).
+  This repo adds Jackson 3 `% Test` in `cucumberSbtIntegrationSettingsForTest`; the testkit
+  deliberately does not export one, so each implementation must supply its own (a downstream
+  repo may already get Jackson 2 transitively, as `dcb-store-sw-eventstore` likely does).
 - `Given("an empty DCB store")` is deliberately a no-op: freshness relies on Cucumber constructing a
   new glue instance per scenario, so it is the *subclass* constructor that creates a fresh store.
 - Scenarios tagged `@ignore` are filtered out by the runners.
@@ -100,7 +107,7 @@ entry in the `testInMem` alias.
   `Tags.scala`/`Events.scala` use `final type` aliases that were never checked against 3.7. Lowering
   the version later is non-breaking for consumers; raising it is breaking. Keep this build in lockstep
   with the consuming repos.
-- **Java 17+** (Cucumber 8 and Jackson 3 require it). Developed on Temurin 21.
+- **Java 17+** (Cucumber 8 and Jackson 3 require it). Developed on Temurin 27 and tested with Temurin 21.
 - **`-Werror` is the lint step.** Any warning fails the build; there is no separate linter.
 - **Scaladoc inherits `-Werror`**, and the sources contain unresolved `[[links]]`, so
   `Compile / packageDoc / publishArtifact := false` in `commonSettings`. Removing that will break

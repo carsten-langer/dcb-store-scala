@@ -11,6 +11,7 @@ of the public API of DcbStoreStepDefinitions:
 
 And for running the tests:
 - Cucumber JVM JUnit Platform Engine (https://github.com/cucumber/cucumber-jvm) - licensed under MIT License
+- Jackson Databind (https://github.com/FasterXML/jackson-databind) - licensed under Apache 2.0 License
 - JUnit (https://github.com/junit-team/junit-framework) - licensed under Eclipse Public License 2.0
 - sbt Jupiter Interface (https://github.com/sbt/sbt-jupiter-interface) - licensed under Apache 2.0 License
 

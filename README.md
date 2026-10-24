@@ -69,7 +69,7 @@ each — and are then composed into a single query against the store. See the Sc
   requirement can be lowered later without breaking anyone; raising it would be breaking.
 - **`-language:strictEquality` is expected.** The sources are written for it, and the public API
   hands back types that you will usually want `CanEqual` instances for.
-- Java 17+ (developed and tested against Temurin 21).
+- Java 17+ (developed and tested against Temurin 21 and Temurin 27).
 
 ## Implementing your own DcbStore, and verifying it
 
@@ -97,6 +97,16 @@ libraryDependencies += "de.carsten-langer" %% "dcb-store-testkit" % "0.1.0-SNAPS
 ```
 
 plus `cucumber-junit-platform-engine`, `junit-platform-suite` and `jupiter-interface` to run it.
+
+Depending on the report plugins you configure (e.g. `html:`), Cucumber (JVM) 8 may fail with
+_"Cucumber needs a JSON library to write reports"_. It then needs a **JSON library on the test classpath**:
+Jackson 3 (`tools.jackson.core:jackson-databind`) or Jackson 2 (`jackson-databind` + `jackson-datatype-jdk8`).
+The testkit deliberately does not export one, so add one yourself unless your build already brings it in
+transitively:
+
+```scala
+libraryDependencies += "tools.jackson.core" % "jackson-databind" % "3.2.4" % Test
+```
 
 Note the `@SelectClasspathResource`, **not** `@SelectPackages`: the feature file arrives inside the
 testkit jar, and Cucumber's package scanning for `.feature` resources inside jars is unreliable —
