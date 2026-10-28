@@ -5,7 +5,7 @@ package dcbstore
 import scala.concurrent.Future
 
 /**
- * A simple DCB (Dynamic Context Boundary) store API following https://dcb.events.
+ * A simple DCB (Dynamic Context Boundaries) store API following https://dcb.events.
  *
  * @tparam EventType The Scala type of DCB's "Event Data", see [[Event.eventType]]. Having this type parameter allows
  *                   for some flexibility in the implementation of the store.

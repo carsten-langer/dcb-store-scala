@@ -1,6 +1,6 @@
 # dcb-store-scala
 
-A small Scala 3 API for **DCB** (Dynamic Consistency Boundary) event stores, following
+A small Scala 3 API for **DCB** (Dynamic Consistency Boundaries) event stores, following
 <https://dcb.events/>, incl. conformance specification and an example in-memory implementation.
 
 A DCB store keeps events in a single global sequence. Events carry an *event type* and a set of *tags*, and are queried

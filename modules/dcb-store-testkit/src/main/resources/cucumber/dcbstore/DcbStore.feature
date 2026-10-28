@@ -1,4 +1,4 @@
-Feature: Dynamic Consistency Boundary event store
+Feature: Dynamic Consistency Boundaries event store
 
   A DCB store stores events in a single global sequence.
   Events can be queried by event type and tags.

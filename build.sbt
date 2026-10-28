@@ -45,7 +45,7 @@ lazy val licenseMappings = Def.setting {
 
 
 ////////////////////////////////////////
-// A generic DCB store API (Dynamic Context Boundary)
+// A generic DCB store API (Dynamic Context Boundaries)
 // See https://dcb.events/
 ////////////////////////////////////////
 lazy val dcbStore = (project in file("modules/dcb-store"))

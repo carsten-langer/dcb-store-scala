@@ -5,7 +5,7 @@ with code in this repository. `CLAUDE.md` imports it, so keep this file as the s
 
 ## What this is
 
-A standalone Scala 3 library implementing a **DCB** (Dynamic Consistency Boundary) event-store API,
+A standalone Scala 3 library implementing a **DCB** (Dynamic Consistency Boundaries) event-store API,
 see <https://dcb.events/>, plus a shared conformance spec and one in-memory implementation.
 Extracted from a (non-public) Play application with history preserved; that (non-public) Play application is now a
 consumer.
