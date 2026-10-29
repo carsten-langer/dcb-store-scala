@@ -160,5 +160,7 @@ ThisBuild / scalacOptions ++= Seq(
 ////////////////////////////////////////
 addCommandAlias(
   name = "testInMem",
-  value = "dcbStoreInMem / Test / testOnly cucumber.dcbstore.inmemdcbstore.InMemDcbStoreCucumberSpec",
+  value = "dcbStoreInMem / Test / testOnly" +
+    " cucumber.dcbstore.inmemdcbstore.InMemDcbStoreCucumberSpec" +
+    " scalatest.dcbstore.decisionmodel.inmemdcbstore.InMemNamedDecisionModelSpec",
 )

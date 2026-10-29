@@ -22,20 +22,22 @@ consistency.
 * A fully fledged event store. Instead, using this API adaptors could be written against existing third party DCB event
   stores. One such adaptor exists already as
   [dcb-store-sw-eventstore](https://github.com/carsten-langer/dcb-store-sw-eventstore), which adapts this API towards
-  [Sliceworkz Eventstore](https://sliceworkz.github.io/eventstore/), a third-party open source event store implementation in Java.
+  [Sliceworkz Eventstore](https://sliceworkz.github.io/eventstore/), a third-party open source event store
+  implementation in Java.
 * Read models, subscriptions or similar. This is outside the core idea of **DCB**, which focuses on decision models.
   If needed, the mechanisms of the chosen underlying DCB event store could be used.
 * Publishing the libraries to Maven or similar is currently not planned.
 
 ## Artifacts
 
-All artifacts are published under group `de.carsten-langer` (the domain seems useful, but is not officially owned by me):
+All artifacts are published under group `de.carsten-langer` (the domain seems useful, but is not officially owned by
+me):
 
-| Artifact            | Contents                                                                    | Third-party compile deps  |
-|---------------------|-----------------------------------------------------------------------------|---------------------------|
-| `dcb-store`         | the `DcbStore` API plus the projection / decision-model layer               | **none**                  |
-| `dcb-store-testkit` | the shared conformance spec: `DcbStore.feature` + `DcbStoreStepDefinitions` | cucumber-scala, ScalaTest |
-| `dcb-store-inmem`   | a simple in-memory `DcbStore`                                               | none                      |
+| Artifact            | Contents                                                                                                  | Third-party compile deps  |
+|---------------------|-----------------------------------------------------------------------------------------------------------|---------------------------|
+| `dcb-store`         | the `DcbStore` API plus the projection / decision-model layer                                             | **none**                  |
+| `dcb-store-testkit` | the shared conformance spec: `DcbStore.feature` + `DcbStoreStepDefinitions`, and `NamedDecisionModelSpec` | cucumber-scala, ScalaTest |
+| `dcb-store-inmem`   | a simple in-memory `DcbStore`                                                                             | none                      |
 
 ## Usage
 
@@ -114,8 +116,17 @@ libraryDependencies += "de.carsten-langer" %% "dcb-store-testkit" % "0.1.0-SNAPS
 
 plus `cucumber-junit-platform-engine`, `junit-platform-suite` and `jupiter-interface` to run it.
 
-Depending on the report plugins you configure (e.g. `html:`), Cucumber (JVM) 8 may fail with
-_"Cucumber needs a JSON library to write reports"_. It then needs a **JSON library on the test classpath**:
+The testkit also contains `NamedDecisionModelSpec`, a plain ScalaTest spec of the decision-model layer
+run against your store. It takes a factory for a fresh, empty store, as ScalaTest runs all tests of a
+suite on one instance. Your store must accept `String` event types and `AnyRef` data:
+
+```scala
+// src/test/scala/…
+class MyNamedDecisionModelSpec extends NamedDecisionModelSpec(() => MyDcbStore())
+```
+
+Depending on the report plugins you configure (e.g. `html:`), Cucumber (JVM) 8 may fail with _"Cucumber needs a JSON
+library to write reports"_. It then needs a **JSON library on the test classpath**:
 Jackson 3 (`tools.jackson.core:jackson-databind`) or Jackson 2 (`jackson-databind` + `jackson-datatype-jdk8`).
 The testkit deliberately does not export one, so add one yourself unless your build already brings it in
 transitively:
@@ -136,7 +147,7 @@ types are fixed to `String`, only because this is what the feature file uses.
 
 ```
 sbt compile
-sbt test           # runs the conformance suite against dcb-store-inmem
+sbt test           # runs the conformance suites against dcb-store-inmem
 sbt testInMem      # the same, by name
 sbt publishLocal
 ```
