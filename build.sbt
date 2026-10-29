@@ -15,7 +15,8 @@ ThisBuild / licenses := Seq(License.Apache2)
 // Scala 3.7 is the hard minimum for this code base, i.e. 3.3 LTS is NOT reachable without an API
 // redesign:
 // - named tuples (stable in 3.7) appear in the PUBLIC signatures of
-//   dcbstore.decisionmodel.DecisionModel and dcbstore.decisionmodel.SingleProjection,
+//   dcbstore.decisionmodel.DecisionModel, dcbstore.decisionmodel.NamedDecisionModel and
+//   dcbstore.decisionmodel.SingleProjection,
 //   including a function parameter type,
 // - "-Wall" needs 3.6+,
 // - Tags.scala / Events.scala use "final type" aliases (not verified against 3.7).

@@ -53,13 +53,29 @@ libraryDependencies += "de.carsten-langer" %% "dcb-store-inmem" % "0.1.0-SNAPSHO
 - `dcbstore`: `DcbStore` (with its abstract `SequencePosition` and `AppendConditionFailed` types),
   `Event`, `Events`, `SequencedEvent`, `Query`, `QueryItem`, `AppendCondition`, `Tag`, `Tags`
 - `dcbstore.decisionmodel`: `Projection`, `SingleProjection` (plus `SingleProjection.handler` and
-  the `DataToEventType` type class), `ComposedProjection`, `DecisionModel`, and four `extension`
-  methods on `DcbStore` — `buildDecisionModel` and `buildReadModel`, each for one projection or an
-  iterable of them
+  the `DataToEventType` type class), `ComposedProjection`, `TupleProjection`, `DecisionModel`, `NamedDecisionModel`,
+  and six `extension` methods on `DcbStore` — `buildDecisionModel` and `buildReadModel`, each for
+  one projection, an iterable of them, or a named tuple of them
 
 The design intent is that write/decision models are as small as possible — typically one yes/no question
 each — and are then composed into a single query against the store. See the Scaladoc on
-`DecisionModel` and `ComposedProjection`.
+`DecisionModel`, `NamedDecisionModel`, `ComposedProjection` and `TupleProjection`.
+
+Composing projections as a **named tuple** keeps each projection's state type, so the decision can
+be written against named, typed fields:
+
+```scala
+store.buildDecisionModel((courseExists = courseExists(id), capacity = courseCapacity(id)))
+  .flatMap: (finalState, appendConditionO) =>
+    // finalState: (courseExists: Boolean, capacity: Int)
+    if finalState.courseExists && finalState.capacity > 0
+    then store.append(events, appendConditionO)
+    else Future.failed(CourseNotAvailable(id))
+```
+
+The store is read once with the merged query of all projections, and the single append condition
+covers all of them. Composing an `Iterable` of projections does the same, but returns the states as
+an `Iterable` of their common super type.
 
 ## Requirements for consumers
 

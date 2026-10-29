@@ -89,30 +89,3 @@ object DecisionModel:
                                         projections: Iterable[Projection[State, EventType]],
                                       )(using ExecutionContext): Future[Iterable[State]] =
     buildDecisionModel(dcbStore, projections).map(_.finalState)
-
-
-// Convenience extensions to call the buildDecisionModel() etc. methods directly on a DcbStore.
-extension [EventType](dcbStore: DcbStore[EventType, ?])
-  def buildDecisionModel[State](projection: Projection[State, EventType])
-                               (using ExecutionContext)
-  : Future[(finalState: State, appendConditionO: Option[AppendCondition[EventType, dcbStore.SequencePosition]])] =
-    DecisionModel.buildDecisionModel(dcbStore, projection)
-
-extension [EventType](dcbStore: DcbStore[EventType, ?])
-  def buildDecisionModel[State](projections: Iterable[Projection[State, EventType]])
-                               (using ExecutionContext)
-  : Future[(
-    finalState: Iterable[State],
-    appendConditionO: Option[AppendCondition[EventType, dcbStore.SequencePosition]],
-  )] =
-    DecisionModel.buildDecisionModel(dcbStore, projections)
-
-extension [State, EventType](dcbStore: DcbStore[EventType, ?])
-  def buildReadModel(projection: Projection[State, EventType])
-                    (using ExecutionContext): Future[State] =
-    DecisionModel.buildReadModel(dcbStore, projection)
-
-extension [EventType](dcbStore: DcbStore[EventType, ?])
-  def buildReadModel[State](projections: Iterable[Projection[State, EventType]])
-                           (using ExecutionContext): Future[Iterable[State]] =
-    DecisionModel.buildReadModel(dcbStore, projections)

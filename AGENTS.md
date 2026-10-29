@@ -102,8 +102,8 @@ entry in the `testInMem` alias.
 ## Constraints worth knowing before editing
 
 - **Scala 3.8.4, and the TASTy rule.** Consumers must be on Scala 3.8+. The hard floor for this code
-  is **3.7**, not 3.3 LTS: named tuples appear in the *public* signatures of `DecisionModel.scala` and
-  `SingleProjection.scala` (including a function parameter type), `-Wall` needs 3.6+, and
+  is **3.7**, not 3.3 LTS: named tuples appear in the *public* signatures of `DecisionModel.scala`, `package.scala`,
+  `NamedDecisionModel.scala` and `SingleProjection.scala` (including a function parameter type), `-Wall` needs 3.6+, and
   `Tags.scala`/`Events.scala` use `final type` aliases that were never checked against 3.7. Lowering
   the version later is non-breaking for consumers; raising it is breaking. Keep this build in lockstep
   with the consuming repos.
@@ -118,6 +118,13 @@ entry in the `testInMem` alias.
   reintroduce it here.
 - **`-language:strictEquality` is on and load-bearing** — e.g. `SingleProjection.scala` needs an
   explicit `given CanEqual[EventType, EventType] = CanEqual.derived`.
+- **`NamedDecisionModel` is cast-free by construction.** `TupleProjection.Builder` instances are
+  derived along the tuple structure (`EmptyTuple` / `head *: tail`), which also computes the tuple of
+  state types. Keep it that way rather than going through `Iterable`/`productIterator`, which loses
+  the types and needs `asInstanceOf` to get them back. `Tuple`'s inline methods (e.g. `toList`) on an
+  abstract tuple type crashed the 3.8.4 inliner; plain `*:` pattern matching works.
+- **All `extension`s on `DcbStore` live in `decisionmodel/package.scala`**, because Scala 3 only
+  allows overloads of top-level definitions within one file.
 - **Named tuples interact badly with runtime type checks.** `SingleProjection.handler` requires a
   `Typeable[Data]` for exactly this reason: the projection stores handlers with data type `Any` and
   has to test the real type at runtime. Consumers composing projections generally need each
