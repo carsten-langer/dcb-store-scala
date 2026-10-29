@@ -33,11 +33,11 @@ consistency.
 All artifacts are published under group `de.carsten-langer` (the domain seems useful, but is not officially owned by
 me):
 
-| Artifact            | Contents                                                                                                  | Third-party compile deps  |
-|---------------------|-----------------------------------------------------------------------------------------------------------|---------------------------|
-| `dcb-store`         | the `DcbStore` API plus the projection / decision-model layer                                             | **none**                  |
-| `dcb-store-testkit` | the shared conformance spec: `DcbStore.feature` + `DcbStoreStepDefinitions`, and `NamedDecisionModelSpec` | cucumber-scala, ScalaTest |
-| `dcb-store-inmem`   | a simple in-memory `DcbStore`                                                                             | none                      |
+| Artifact            | Contents                                                                                                                                | Third-party compile deps  |
+|---------------------|-----------------------------------------------------------------------------------------------------------------------------------------|---------------------------|
+| `dcb-store`         | the `DcbStore` API plus the projection / decision-model layer                                                                           | **none**                  |
+| `dcb-store-testkit` | the shared conformance spec: `DcbStore.feature` + `DcbStoreStepDefinitions`, and `NamedDecisionModelSpec` + `ComposedDecisionModelSpec` | cucumber-scala, ScalaTest |
+| `dcb-store-inmem`   | a simple in-memory `DcbStore`                                                                                                           | none                      |
 
 ## Usage
 
@@ -116,13 +116,18 @@ libraryDependencies += "de.carsten-langer" %% "dcb-store-testkit" % "0.1.0-SNAPS
 
 plus `cucumber-junit-platform-engine`, `junit-platform-suite` and `jupiter-interface` to run it.
 
-The testkit also contains `NamedDecisionModelSpec`, a plain ScalaTest spec of the decision-model layer
-run against your store. It takes a factory for a fresh, empty store, as ScalaTest runs all tests of a
-suite on one instance. Your store must accept `String` event types and `AnyRef` data:
+The testkit also contains `NamedDecisionModelSpec` and `ComposedDecisionModelSpec`, plain ScalaTest specs
+of the decision-model layer run against your store. They compose the same two projections in the two
+available ways — as a named tuple with typed, named states, and as an `Iterable` whose union-typed states
+are recovered by pattern matching — and so double as a comparison of both. Each takes a factory for a
+fresh, empty store, as ScalaTest runs all tests of a suite on one instance. Your store must accept
+`String` event types and `AnyRef` data:
 
 ```scala
 // src/test/scala/…
 class MyNamedDecisionModelSpec extends NamedDecisionModelSpec(() => MyDcbStore())
+
+class MyComposedDecisionModelSpec extends ComposedDecisionModelSpec(() => MyDcbStore())
 ```
 
 Depending on the report plugins you configure (e.g. `html:`), Cucumber (JVM) 8 may fail with _"Cucumber needs a JSON

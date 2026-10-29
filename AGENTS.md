@@ -17,14 +17,15 @@ store against the testkit).
 
 ```
 sbt compile
-sbt test                # the conformance suites against dcb-store-inmem: 15 scenarios, 75 steps + 1 ScalaTest test
-sbt testInMem           # alias for both suites, by name
+sbt test                # the conformance suites against dcb-store-inmem: 15 scenarios, 75 steps + 2 ScalaTest tests
+sbt testInMem           # alias for all three suites, by name
 sbt publishLocal
 sbt dependencyBrowseGraph
 ```
 
 Single suite: `sbt "dcbStoreInMem / Test / testOnly cucumber.dcbstore.inmemdcbstore.InMemDcbStoreCucumberSpec"`
-or `sbt "dcbStoreInMem / Test / testOnly scalatest.dcbstore.decisionmodel.inmemdcbstore.InMemNamedDecisionModelSpec"`.
+or `sbt "dcbStoreInMem / Test / testOnly scalatest.dcbstore.decisionmodel.inmemdcbstore.InMemNamedDecisionModelSpec"`
+(likewise `InMemComposedDecisionModelSpec`).
 
 `dcbStore` and `dcbStoreTestkit` have **no tests of their own** — only `dcbStoreInMem` runs suites,
 so `sbt "dcbStore / test"` correctly reports "no tests". Use `sbt "dcbStore / Test / compile"` if you
@@ -49,7 +50,7 @@ flag that the raw jar rejects as "Not a valid command".
 dcb-store            the DcbStore API + projections / decision models; ZERO third-party compile deps
 dcb-store-testkit    the shared conformance spec, as MAIN sources: DcbStoreStepDefinitions
                      + resources/cucumber/dcbstore/DcbStore.feature, and the ScalaTest
-                     NamedDecisionModelSpec.  dependsOn(dcbStore)
+                     NamedDecisionModelSpec + ComposedDecisionModelSpec.  dependsOn(dcbStore)
 dcb-store-inmem      an in-memory DcbStore.  dependsOn(dcbStore, dcbStoreTestkit % Test)
 root (.)             pure aggregator, publish / skip := true
 ```
@@ -89,8 +90,11 @@ thing to understand here:
 - `Given("an empty DCB store")` is deliberately a no-op: freshness relies on Cucumber constructing a
   new glue instance per scenario, so it is the *subclass* constructor that creates a fresh store.
 - Scenarios tagged `@ignore` are filtered out by the runners.
-- `scalatest.dcbstore.decisionmodel.NamedDecisionModelSpec` is a second, plain ScalaTest spec covering
-  the decision-model layer (named-tuple composition) against a real store. It is an abstract class
+- `scalatest.dcbstore.decisionmodel.NamedDecisionModelSpec` and `ComposedDecisionModelSpec` are plain
+  ScalaTest specs covering the decision-model layer against a real store. They compose the same two
+  projections from `CourseFixtures.scala`, once as a named tuple (typed states by name) and once as an
+  `Iterable` via `ComposedProjection` (a union-typed state, recovered by pattern matching), so they
+  read as a side-by-side comparison; keep them parallel when changing either. Each is an abstract class
   taking a **factory** `() => DcbStore[EventType, DataSuper]` rather than a store, because ScalaTest
   shares one suite instance across all its tests, unlike Cucumber's per-scenario glue. Its
   `EventType`/`DataSuper` aliases are `String`/`AnyRef` (case classes as data), not the Cucumber
@@ -105,7 +109,7 @@ resource form so the behaviour is identical. If more feature files are ever adde
 annotations rather than reverting to package selection.
 
 To add an implementation: new step-definitions subclass, new `*CucumberSpec` runner, new
-`NamedDecisionModelSpec` subclass,
+`NamedDecisionModelSpec` and `ComposedDecisionModelSpec` subclasses,
 `cucumberSbtIntegrationSettingsForTest` on the module, a `lazy val` plus root `.aggregate`, and an
 entry in the `testInMem` alias.
 

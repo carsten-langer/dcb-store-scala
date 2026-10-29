@@ -162,5 +162,6 @@ addCommandAlias(
   name = "testInMem",
   value = "dcbStoreInMem / Test / testOnly" +
     " cucumber.dcbstore.inmemdcbstore.InMemDcbStoreCucumberSpec" +
-    " scalatest.dcbstore.decisionmodel.inmemdcbstore.InMemNamedDecisionModelSpec",
+    " scalatest.dcbstore.decisionmodel.inmemdcbstore.InMemNamedDecisionModelSpec" +
+    " scalatest.dcbstore.decisionmodel.inmemdcbstore.InMemComposedDecisionModelSpec",
 )
