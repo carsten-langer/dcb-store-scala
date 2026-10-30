@@ -27,7 +27,7 @@ handlers `Rejected` and `appendIfAccepted`. Import them with
 |------------------------------------------------------------------------------------------|----------------------------|---------|
 | [Course subscriptions](https://dcb.events/examples/course-subscriptions/)                | `coursesubscriptions`      | done    |
 | [Unique username](https://dcb.events/examples/unique-username/)                          | `uniqueusername`           | done    |
-| [Product reviews](https://dcb.events/examples/product-reviews/)                          | `productreviews`           | planned |
+| [Product reviews](https://dcb.events/examples/product-reviews/)                          | `productreviews`           | done    |
 | [Bike rental](https://dcb.events/examples/bike-rental/)                                  | `bikerental`               | planned |
 | [Library loans](https://dcb.events/examples/library-loans/)                              | `libraryloans`             | planned |
 | [Invoice number](https://dcb.events/examples/invoice-number/)                            | `invoicenumber`            | planned |
