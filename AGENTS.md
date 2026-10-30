@@ -6,7 +6,8 @@ with code in this repository. `CLAUDE.md` imports it, so keep this file as the s
 ## What this is
 
 A standalone Scala 3 library implementing a **DCB** (Dynamic Consistency Boundaries) event-store API,
-see <https://dcb.events/>, plus a shared conformance spec and one in-memory implementation.
+see <https://dcb.events/>, plus a shared conformance spec, one in-memory implementation, and an
+(unpublished) examples module following <https://dcb.events/examples/>.
 Extracted from a (non-public) Play application with history preserved; that (non-public) Play application is now a
 consumer.
 
@@ -17,8 +18,10 @@ store against the testkit).
 
 ```
 sbt compile
-sbt test                # the conformance suites against dcb-store-inmem: 15 scenarios, 75 steps + 2 ScalaTest tests
-sbt testInMem           # alias for all three suites, by name
+sbt test                # all suites: the conformance suites against dcb-store-inmem (15 scenarios, 75 steps
+                        # + 2 ScalaTest tests) and the examples
+sbt testInMem           # alias for the three conformance suites, by name
+sbt testExamples        # alias for the examples' tests
 sbt publishLocal
 sbt dependencyBrowseGraph
 ```
@@ -52,6 +55,8 @@ dcb-store-testkit    the shared conformance spec, as MAIN sources: DcbStoreStepD
                      + resources/cucumber/dcbstore/DcbStore.feature, and the ScalaTest
                      NamedDecisionModelSpec + ComposedDecisionModelSpec.  dependsOn(dcbStore)
 dcb-store-inmem      an in-memory DcbStore.  dependsOn(dcbStore, dcbStoreTestkit % Test)
+dcb-store-examples   the dcb.events examples, NOT published (publish / skip := true).
+                     dependsOn(dcbStore, dcbStoreInMem % Test)
 root (.)             pure aggregator, publish / skip := true
 ```
 
@@ -100,6 +105,16 @@ thing to understand here:
   `EventType`/`DataSuper` aliases are `String`/`AnyRef` (case classes as data), not the Cucumber
   spec's `String`/`String`. Each implementation runs it via an empty subclass in its test sources;
   sbt discovers that like any ScalaTest suite, no runner annotations needed.
+
+**Examples** (`modules/dcb-store-examples`, see its `README.md` for the list and status): one
+package per example, `dcbstore.examples.<example>` in main and `scalatest.dcbstore.examples.<example>`
+in test. Main code is written against `DcbStore[EventType, DataSuper]` only and must not use
+`InMemDcbStore`, which is why the in-memory store is only a Test dependency. Shared conventions
+(`EventType = String`, `DataSuper = AnyRef`, the class-name-derived event type, the `event` helper)
+are top-level in `ExampleConventions.scala`; sub-packages need `import dcbstore.examples.{*, given}`.
+Under `strictEquality`, event case classes compared in tests need `derives CanEqual`, and comparing
+`Tags` needs a `CanEqual[Tag, Tag]`, as `dcb-store` does not provide one. When implementing an
+example, set its status in the module README.
 
 **Use `@SelectClasspathResource`, never `@SelectPackages`.** Package selection makes JUnit scan the
 classpath for `cucumber/dcbstore/*.feature`, which is unreliable when the feature is inside a jar —

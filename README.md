@@ -16,6 +16,10 @@ consistency.
 * A projection / decision-model layer on top of the API.
 * A simple in-memory implementation of the API, incl. test execution of the conformance specification.
 * Local publishing of the libraries is considered good-enough for now.
+* The examples of <https://dcb.events/examples/>, implemented with this library to demonstrate its use, see
+  [modules/dcb-store-examples]. They are not published.
+
+[modules/dcb-store-examples]: modules/dcb-store-examples/README.md
 
 ## Non-Goals
 
@@ -49,6 +53,9 @@ The version in all snippets below must match `ThisBuild / version` in this repos
 libraryDependencies += "de.carsten-langer" %% "dcb-store" % "0.1.0-SNAPSHOT"
 libraryDependencies += "de.carsten-langer" %% "dcb-store-inmem" % "0.1.0-SNAPSHOT"
 ```
+
+Look at [modules/dcb-store-examples] how the `DcbStore` API and the projection / decision-model layer can be used to
+implement the examples of <https://dcb.events/examples/>.
 
 ## API surface
 
@@ -152,8 +159,9 @@ types are fixed to `String`, only because this is what the feature file uses.
 
 ```
 sbt compile
-sbt test           # runs the conformance suites against dcb-store-inmem
-sbt testInMem      # the same, by name
+sbt test           # runs the conformance suites against dcb-store-inmem, and the examples
+sbt testInMem      # only the conformance suites, by name
+sbt testExamples   # only the examples
 sbt publishLocal
 ```
 

@@ -26,6 +26,11 @@ ThisBuild / licenses := Seq(License.Apache2)
 ThisBuild / scalaVersion := "3.8.4"
 
 
+// https://www.scalatest.org/release_notes
+// Shared by dcbStoreTestkit (Compile) and dcbStoreExamples (Test), to keep both on the same version.
+lazy val scalatest = "org.scalatest" %% "scalatest" % "3.2.20"
+
+
 ////////////////////////////////////////
 // Settings shared by all published modules
 ////////////////////////////////////////
@@ -77,8 +82,7 @@ lazy val dcbStoreTestkit = (project in file("modules/dcb-store-testkit"))
       // and ScalaFutures/IntegrationPatience/Matchers/TryValues (scalatest).
       // https://github.com/cucumber/cucumber-jvm-scala/releases
       "io.cucumber" %% "cucumber-scala" % "9.2.1",
-      // https://www.scalatest.org/release_notes
-      "org.scalatest" %% "scalatest" % "3.2.20",
+      scalatest,
     ),
   )
 
@@ -122,11 +126,25 @@ lazy val dcbStoreInMem = (project in file("modules/dcb-store-inmem"))
 
 
 ////////////////////////////////////////
+// Examples following https://dcb.events/examples/, demonstrating the projection / decision-model layer
+////////////////////////////////////////
+// Not a library, thus not published. The examples' main code is written against the DcbStore API only, so it would
+// work with any store; only their tests run it against the in-memory store.
+lazy val dcbStoreExamples = (project in file("modules/dcb-store-examples"))
+  .dependsOn(dcbStore, dcbStoreInMem % Test)
+  .settings(
+    name := "dcb-store-examples",
+    publish / skip := true,
+    libraryDependencies += scalatest % Test,
+  )
+
+
+////////////////////////////////////////
 // The root project: pure aggregator, publishes nothing
 ////////////////////////////////////////
 lazy val root = (project in file("."))
   // https://www.scala-sbt.org/1.x/docs/Multi-Project.html#Aggregation
-  .aggregate(dcbStore, dcbStoreTestkit, dcbStoreInMem)
+  .aggregate(dcbStore, dcbStoreTestkit, dcbStoreInMem, dcbStoreExamples)
   .settings(
     name := "dcb-store-scala",
     // In sbt 1.x the publish task reads "publish / skip" for both publish and publishLocal, so
@@ -164,4 +182,8 @@ addCommandAlias(
     " cucumber.dcbstore.inmemdcbstore.InMemDcbStoreCucumberSpec" +
     " scalatest.dcbstore.decisionmodel.inmemdcbstore.InMemNamedDecisionModelSpec" +
     " scalatest.dcbstore.decisionmodel.inmemdcbstore.InMemComposedDecisionModelSpec",
+)
+addCommandAlias(
+  name = "testExamples",
+  value = "dcbStoreExamples / test",
 )
