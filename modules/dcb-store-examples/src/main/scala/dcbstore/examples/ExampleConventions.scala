@@ -1,8 +1,9 @@
 package dcbstore.examples
 
 import dcbstore.decisionmodel.SingleProjection.DataToEventType
-import dcbstore.{Event, Tags}
+import dcbstore.{AppendCondition, DcbStore, Event, Events, Tags}
 
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.{ClassTag, classTag}
 
 // Conventions shared by all examples, which live in sub-packages, e.g. dcbstore.examples.coursesubscriptions.
@@ -27,3 +28,21 @@ given simpleClassNameAsEventType: [Data <: DataSuper : ClassTag] => DataToEventT
 def event[Data <: DataSuper](data: Data, tags: Tags)(using dataToEventType: DataToEventType[Data, EventType])
 : Event[EventType, Data] =
   Event(dataToEventType.eventType, data, tags)
+
+/** A command violating a business rule. Other than a failed append condition, this is a regular outcome. */
+final case class Rejected(reason: String) derives CanEqual
+
+/**
+ * The last step of every command handler: appends the events of an accepted decision with the decision model's append
+ * condition, or passes on the rejection.
+ *
+ * @return A [[Future]] of [[Rejected]] if the decision was a rejection, or of [[Unit]] if the events were appended. A
+ *         failed [[Future]] if the append condition failed, i.e. the command can be retried.
+ */
+def appendIfAccepted[Data <: DataSuper](store: DcbStore[EventType, DataSuper])(
+  decision: Either[Rejected, Events[EventType, Data]],
+  appendConditionO: Option[AppendCondition[EventType, store.SequencePosition]],
+)(using ExecutionContext): Future[Either[Rejected, Unit]] =
+  decision match
+    case Left(rejected) => Future.successful(Left(rejected))
+    case Right(events) => store.append(events, appendConditionO).map(Right(_))

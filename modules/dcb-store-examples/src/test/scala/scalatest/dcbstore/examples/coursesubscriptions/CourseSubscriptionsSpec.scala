@@ -3,38 +3,13 @@ package scalatest.dcbstore.examples.coursesubscriptions
 import dcbstore.examples.*
 import dcbstore.examples.coursesubscriptions.*
 import dcbstore.inmemdcbstore.{InMemAppendConditionFailed, InMemDcbStore}
-import dcbstore.{DcbStore, Event, Query}
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
-import scalatest.dcbstore.examples.ConcurrentWriterStore
+import scalatest.dcbstore.examples.{ConcurrentWriterStore, ExampleSpec}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 // The scenarios of https://dcb.events/examples/course-subscriptions/, plus the append condition at work.
 class CourseSubscriptionsSpec
-  extends AnyFlatSpec
-    with Matchers
-    with ScalaFutures
-    with IntegrationPatience:
-
-  // Event does not derive CanEqual in dcb-store, so under strictEquality comparing events needs it given here. The
-  // read events have the data type DataSuper, the expected ones their specific data type.
-  private given [Data1 <: DataSuper, Data2 <: DataSuper] => CanEqual[Event[EventType, Data1], Event[EventType, Data2]] =
-    CanEqual.derived
-
-  // Given the events in a fresh store, when the command is handled, then its result and the newly appended events.
-  private def scenario(givenEvents: Event[EventType, DataSuper]*)
-                      (when: CourseSubscriptionsCommandHandler => Future[Either[Rejected, Unit]])
-  : (result: Either[Rejected, Unit], newEvents: List[Event[EventType, DataSuper]]) =
-    val store = InMemDcbStore[EventType, DataSuper]()
-    store.append(givenEvents.toList).futureValue
-    val result = when(CourseSubscriptionsCommandHandler(store)).futureValue
-    (result = result, newEvents = allEvents(store).drop(givenEvents.size))
-
-  private def allEvents(store: DcbStore[EventType, DataSuper]): List[Event[EventType, DataSuper]] =
-    store.read(Query.all).futureValue.iterator.map(_.event).toList
+  extends ExampleSpec(CourseSubscriptionsCommandHandler(_)):
 
   "DefineCourse" should "be rejected for an existing id" in :
     val (result, newEvents) = scenario(CourseDefined("c1", 10).toEvent)(_.handle(DefineCourse("c1", 15)))

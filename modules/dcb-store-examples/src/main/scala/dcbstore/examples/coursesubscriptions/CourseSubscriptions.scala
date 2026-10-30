@@ -3,7 +3,7 @@ package dcbstore.examples.coursesubscriptions
 import dcbstore.decisionmodel.*
 import dcbstore.decisionmodel.SingleProjection.handler
 import dcbstore.examples.{*, given}
-import dcbstore.{AppendCondition, DcbStore, Event, Events, Tags}
+import dcbstore.{DcbStore, Event, Tags}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -89,19 +89,13 @@ final case class ChangeCourseCapacity(courseId: CourseId, newCapacity: Int)
 
 final case class SubscribeStudentToCourse(studentId: StudentId, courseId: CourseId)
 
-/** A command violating a business rule. Other than a failed append condition, this is a regular outcome. */
-final case class Rejected(reason: String) derives CanEqual
-
 val MaxSubscriptionsPerStudent = 5
 
 /**
  * Handles the commands: builds a decision model from a named tuple of projections, checks the business rules on its
  * typed state, and appends the resulting events with the decision model's append condition. The append condition
  * covers exactly the events the decision was based on, i.e. the consistency boundary, so the append fails if a
- * conflicting event was appended in the meantime.
- *
- * @return A [[Future]] of [[Rejected]] if a business rule is violated, or of [[Unit]] if the events were appended. A
- *         failed [[Future]] if the append condition failed, i.e. the command can be retried.
+ * conflicting event was appended in the meantime. See [[appendIfAccepted]] for the outcomes.
  */
 final class CourseSubscriptionsCommandHandler(store: DcbStore[EventType, DataSuper])(using ExecutionContext):
 
@@ -111,7 +105,7 @@ final class CourseSubscriptionsCommandHandler(store: DcbStore[EventType, DataSup
       val decision =
         if state.exists then Left(Rejected("Course already exists"))
         else Right(List(CourseDefined(courseId, capacity).toEvent))
-      appendIfAccepted(decision, appendConditionO)
+      appendIfAccepted(store)(decision, appendConditionO)
 
   def handle(command: ChangeCourseCapacity): Future[Either[Rejected, Unit]] =
     import command.*
@@ -121,7 +115,7 @@ final class CourseSubscriptionsCommandHandler(store: DcbStore[EventType, DataSup
         if !state.exists then Left(Rejected("Course does not exist"))
         else if state.capacity == newCapacity then Left(Rejected("Capacity is unchanged"))
         else Right(List(CourseCapacityChanged(courseId, newCapacity).toEvent))
-      appendIfAccepted(decision, appendConditionO)
+      appendIfAccepted(store)(decision, appendConditionO)
 
   def handle(command: SubscribeStudentToCourse): Future[Either[Rejected, Unit]] =
     import command.*
@@ -140,12 +134,4 @@ final class CourseSubscriptionsCommandHandler(store: DcbStore[EventType, DataSup
         else if state.studentSubscriptionCount >= MaxSubscriptionsPerStudent
         then Left(Rejected("Student is subscribed to too many courses"))
         else Right(List(StudentSubscribedToCourse(studentId, courseId).toEvent))
-      appendIfAccepted(decision, appendConditionO)
-
-  private def appendIfAccepted[Data <: DataSuper](
-                                                   decision: Either[Rejected, Events[EventType, Data]],
-                                                   appendConditionO: Option[AppendCondition[EventType, store.SequencePosition]],
-                                                 ): Future[Either[Rejected, Unit]] =
-    decision match
-      case Left(rejected) => Future.successful(Left(rejected))
-      case Right(events) => store.append(events, appendConditionO).map(Right(_))
+      appendIfAccepted(store)(decision, appendConditionO)
