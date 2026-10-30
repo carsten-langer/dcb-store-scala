@@ -113,7 +113,9 @@ in test. Main code is written against `DcbStore[EventType, DataSuper]` only and 
 (`EventType = String`, `DataSuper = AnyRef`, the class-name-derived event type, the `event` helper)
 are top-level in `ExampleConventions.scala`; sub-packages need `import dcbstore.examples.{*, given}`.
 Under `strictEquality`, event case classes compared in tests need `derives CanEqual`, and comparing
-`Tags` needs a `CanEqual[Tag, Tag]`, as `dcb-store` does not provide one. When implementing an
+`Tags` needs a `CanEqual[Tag, Tag]`, as `dcb-store` does not provide one; likewise comparing `Event`s, where
+the read ones have data type `DataSuper` and the expected ones their case class (see `CourseSubscriptionsSpec`).
+ScalaTest's `shouldBe` is subject to `strictEquality` too. When implementing an
 example, set its status in the module README.
 
 **Use `@SelectClasspathResource`, never `@SelectPackages`.** Package selection makes JUnit scan the
