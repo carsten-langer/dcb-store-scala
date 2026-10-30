@@ -30,7 +30,7 @@ handlers `Rejected` and `appendIfAccepted`. Import them with
 | [Product reviews](https://dcb.events/examples/product-reviews/)                          | `productreviews`           | done    |
 | [Bike rental](https://dcb.events/examples/bike-rental/)                                  | `bikerental`               | done    |
 | [Library loans](https://dcb.events/examples/library-loans/)                              | `libraryloans`             | done    |
-| [Invoice number](https://dcb.events/examples/invoice-number/)                            | `invoicenumber`            | planned |
+| [Invoice number](https://dcb.events/examples/invoice-number/)                            | `invoicenumber`            | done    |
 | [Dynamic product price](https://dcb.events/examples/dynamic-product-price/)              | `dynamicproductprice`      | planned |
 | [Event-sourced aggregate](https://dcb.events/examples/event-sourced-aggregate/)          | `eventsourcedaggregate`    | planned |
 | [Opt-in token](https://dcb.events/examples/opt-in-token/)                                | `optintoken`               | planned |
