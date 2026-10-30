@@ -14,7 +14,7 @@ Each example is one package, with the same structure:
 - **test** `scalatest.dcbstore.examples.<example>`: the given/when/then test cases of the example's
   page, run against the in-memory store, written with `scenario` of the shared base class `ExampleSpec`. Where useful, additional tests show the append condition
   rejecting a concurrent, conflicting decision, using `ConcurrentWriterStore` from the test sources,
-  which appends given events between the command handler's read and its append.
+  which appends given events between the command handler's read and its append, or between two of its reads.
 
 Shared by all examples, in `ExampleConventions.scala`: `EventType = String`, `DataSuper = AnyRef`,
 the event type derived from the data's simple class name, the `event` helper, and for the command
@@ -29,7 +29,7 @@ handlers `Rejected` and `appendIfAccepted`. Import them with
 | [Unique username](https://dcb.events/examples/unique-username/)                          | `uniqueusername`           | done    |
 | [Product reviews](https://dcb.events/examples/product-reviews/)                          | `productreviews`           | done    |
 | [Bike rental](https://dcb.events/examples/bike-rental/)                                  | `bikerental`               | done    |
-| [Library loans](https://dcb.events/examples/library-loans/)                              | `libraryloans`             | planned |
+| [Library loans](https://dcb.events/examples/library-loans/)                              | `libraryloans`             | done    |
 | [Invoice number](https://dcb.events/examples/invoice-number/)                            | `invoicenumber`            | planned |
 | [Dynamic product price](https://dcb.events/examples/dynamic-product-price/)              | `dynamicproductprice`      | planned |
 | [Event-sourced aggregate](https://dcb.events/examples/event-sourced-aggregate/)          | `eventsourcedaggregate`    | planned |
