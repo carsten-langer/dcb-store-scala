@@ -61,6 +61,24 @@ class DynamicProductPriceSpec
     val _ = result shouldBe Left(Rejected("Price is no longer valid"))
     newEvents shouldBe empty
 
+  it should "order the same product twice, with its previous and its new price, both valid (not in the example)" in :
+    // One projection for the product serves both items.
+    val items = List(Item("p1", price = 123), Item("p1", price = 134))
+    val (result, newEvents) = scenario(
+      ProductDefined("p1", price = 123, at = 80).toEvent,
+      ProductPriceChanged("p1", newPrice = 134, at = 91).toEvent,
+    )(_.handle(OrderProducts(items, now = 100)))
+    val _ = result shouldBe Right(())
+    newEvents shouldBe List(ProductsOrdered(items).toEvent)
+
+  it should "be rejected for the same product twice, if only one of its prices is valid (not in the example)" in :
+    val (result, newEvents) = scenario(
+      ProductDefined("p1", price = 123, at = 80).toEvent,
+      ProductPriceChanged("p1", newPrice = 134, at = 80).toEvent,
+    )(_.handle(OrderProducts(List(Item("p1", price = 134), Item("p1", price = 123)), now = 100)))
+    val _ = result shouldBe Left(Rejected("Price is no longer valid"))
+    newEvents shouldBe empty
+
   // The append condition at work: the command handler decides on the state it read, while a concurrent writer appends
   // its events just before the handler's append.
 

@@ -50,6 +50,8 @@ final case class ProductsOrdered(items: List[Item]) derives CanEqual:
 
 // The prices of the product valid now: the current one, and those changed within the grace period. The example's
 // scripted projection with the parameter now.
+// The final state also names the product, so that in a composition of several of these projections each state can be
+// assigned to its product without relying on the order of the projections. The handlers only work on the prices.
 def productPrices(productId: ProductId, now: Minute) = SingleProjection(
   internalState = List.empty[Money],
   handlers = Map(
@@ -60,6 +62,7 @@ def productPrices(productId: ProductId, now: Minute) = SingleProjection(
       tags = productTags(productId),
     ),
   ),
+  finalStateMapperF = (prices: List[Money]) => (productId = productId, validPrices = prices),
 )
 
 
@@ -70,8 +73,8 @@ def productPrices(productId: ProductId, now: Minute) = SingleProjection(
 final case class OrderProducts(items: List[Item], now: Minute)
 
 /**
- * Handles the command: builds a decision model from an Iterable of projections, one per item in the cart, checks each
- * displayed price against the valid prices of its product, and appends the resulting event with the decision model's
+ * Handles the command: builds a decision model from an Iterable of projections, one per product in the cart, checks
+ * each displayed price against the valid prices of its product, and appends the resulting event with the decision model's
  * append condition. See [[appendIfAccepted]] for the outcomes.
  *
  * The append condition has one query item per ordered product, so if the price of any of them changes in the meantime,
@@ -81,10 +84,11 @@ final class DynamicProductPriceCommandHandler(store: DcbStore[EventType, DataSup
 
   def handle(command: OrderProducts): Future[Either[Rejected, Unit]] =
     import command.*
-    val projections: List[Projection[List[Money], EventType]] = items.map(item => productPrices(item.productId, now))
+    val projections = items.map(_.productId).distinct.map(productPrices(_, now))
     store.buildDecisionModel(projections).flatMap: (state, appendConditionO) =>
-      // The final state has one entry per projection, in the order of the projections, i.e. of the items.
-      val allPricesValid = items.lazyZip(state).forall((item, validPrices) => validPrices.contains(item.price))
+      // Each state names its product, so the order of the states does not matter.
+      val validPricesByProduct = state.map(s => s.productId -> s.validPrices).toMap
+      val allPricesValid = items.forall(item => validPricesByProduct.get(item.productId).exists(_.contains(item.price)))
       val decision =
         if !allPricesValid then Left(Rejected("Price is no longer valid"))
         else Right(List(ProductsOrdered(items).toEvent))
