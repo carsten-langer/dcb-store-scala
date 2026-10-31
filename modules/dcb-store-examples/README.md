@@ -33,7 +33,7 @@ handlers `Rejected` and `appendIfAccepted`. Import them with
 | [Invoice number](https://dcb.events/examples/invoice-number/)                            | `invoicenumber`            | done    |
 | [Dynamic product price](https://dcb.events/examples/dynamic-product-price/)              | `dynamicproductprice`      | done    |
 | [Event-sourced aggregate](https://dcb.events/examples/event-sourced-aggregate/)          | `eventsourcedaggregate`    | done    |
-| [Opt-in token](https://dcb.events/examples/opt-in-token/)                                | `optintoken`               | planned |
+| [Opt-in token](https://dcb.events/examples/opt-in-token/)                                | `optintoken`               | done    |
 | [Prevent record duplication](https://dcb.events/examples/prevent-record-duplication/)    | `preventrecordduplication` | planned |
 
 ## Running
