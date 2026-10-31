@@ -19,7 +19,7 @@ store against the testkit).
 ```
 sbt compile
 sbt test                # all suites: the conformance suites against dcb-store-inmem (15 scenarios, 75 steps
-                        # + 2 ScalaTest tests) and the examples
+                        # + 3 ScalaTest tests) and the examples (one ScalaTest suite per example)
 sbt testInMem           # alias for the three conformance suites, by name
 sbt testExamples        # alias for the examples' tests
 sbt publishLocal
@@ -106,7 +106,8 @@ thing to understand here:
   spec's `String`/`String`. Each implementation runs it via an empty subclass in its test sources;
   sbt discovers that like any ScalaTest suite, no runner annotations needed.
 
-**Examples** (`modules/dcb-store-examples`, see its `README.md` for the list and status): one
+**Examples** (`modules/dcb-store-examples`, see its `README.md` for the list): all ten
+examples of dcb.events are implemented, each in the final form of its page. One
 package per example, `dcbstore.examples.<example>` in main and `scalatest.dcbstore.examples.<example>`
 in test. Main code is written against `DcbStore[EventType, DataSuper]` only and must not use
 `InMemDcbStore`, which is why the in-memory store is only a Test dependency. Shared conventions
@@ -117,8 +118,11 @@ and the `CanEqual` for events; `ConcurrentWriterStore` simulates a concurrent de
 Under `strictEquality`, event case classes compared in tests need `derives CanEqual`, and comparing
 `Tags` needs a `CanEqual[Tag, Tag]`, as `dcb-store` does not provide one; likewise comparing `Event`s, where
 the read ones have data type `DataSuper` and the expected ones their case class (see `ExampleSpec`).
-ScalaTest's `shouldBe` is subject to `strictEquality` too. When implementing an
-example, set its status in the module README.
+ScalaTest's `shouldBe` is subject to `strictEquality` too. Other pitfalls met there: a list of events of
+several data types infers a union type, which `-Wall` warns about (so `-Werror` fails), so type it as
+`List[Event[EventType, DataSuper]]`; and a spec's `private val` declared after the tests using it fails
+the initialization checker, so make it a `def` or declare it first. Scenarios and rejections not on the
+dcb.events page are marked "(not in the example)" in the test names.
 
 **Use `@SelectClasspathResource`, never `@SelectPackages`.** Package selection makes JUnit scan the
 classpath for `cucumber/dcbstore/*.feature`, which is unreliable when the feature is inside a jar —

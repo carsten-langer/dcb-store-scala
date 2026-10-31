@@ -23,18 +23,18 @@ handlers `Rejected` and `appendIfAccepted`. Import them with
 
 ## Examples
 
-| Example                                                                                  | Package                    | Status  |
-|------------------------------------------------------------------------------------------|----------------------------|---------|
-| [Course subscriptions](https://dcb.events/examples/course-subscriptions/)                | `coursesubscriptions`      | done    |
-| [Unique username](https://dcb.events/examples/unique-username/)                          | `uniqueusername`           | done    |
-| [Product reviews](https://dcb.events/examples/product-reviews/)                          | `productreviews`           | done    |
-| [Bike rental](https://dcb.events/examples/bike-rental/)                                  | `bikerental`               | done    |
-| [Library loans](https://dcb.events/examples/library-loans/)                              | `libraryloans`             | done    |
-| [Invoice number](https://dcb.events/examples/invoice-number/)                            | `invoicenumber`            | done    |
-| [Dynamic product price](https://dcb.events/examples/dynamic-product-price/)              | `dynamicproductprice`      | done    |
-| [Event-sourced aggregate](https://dcb.events/examples/event-sourced-aggregate/)          | `eventsourcedaggregate`    | done    |
-| [Opt-in token](https://dcb.events/examples/opt-in-token/)                                | `optintoken`               | done    |
-| [Prevent record duplication](https://dcb.events/examples/prevent-record-duplication/)    | `preventrecordduplication` | done    |
+| Example                                                                                  | Package                    |
+|------------------------------------------------------------------------------------------|----------------------------|
+| [Course subscriptions](https://dcb.events/examples/course-subscriptions/)                | `coursesubscriptions`      |
+| [Unique username](https://dcb.events/examples/unique-username/)                          | `uniqueusername`           |
+| [Product reviews](https://dcb.events/examples/product-reviews/)                          | `productreviews`           |
+| [Bike rental](https://dcb.events/examples/bike-rental/)                                  | `bikerental`               |
+| [Library loans](https://dcb.events/examples/library-loans/)                              | `libraryloans`             |
+| [Invoice number](https://dcb.events/examples/invoice-number/)                            | `invoicenumber`            |
+| [Dynamic product price](https://dcb.events/examples/dynamic-product-price/)              | `dynamicproductprice`      |
+| [Event-sourced aggregate](https://dcb.events/examples/event-sourced-aggregate/)          | `eventsourcedaggregate`    |
+| [Opt-in token](https://dcb.events/examples/opt-in-token/)                                | `optintoken`               |
+| [Prevent record duplication](https://dcb.events/examples/prevent-record-duplication/)    | `preventrecordduplication` |
 
 ## Running
 
