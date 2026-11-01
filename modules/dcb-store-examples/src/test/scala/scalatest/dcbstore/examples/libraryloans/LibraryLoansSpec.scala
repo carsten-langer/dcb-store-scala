@@ -1,9 +1,11 @@
 package scalatest.dcbstore.examples.libraryloans
 
+import dcbstore.Query
 import dcbstore.examples.*
 import dcbstore.examples.libraryloans.*
 import dcbstore.inmemdcbstore.{InMemAppendConditionFailed, InMemDcbStore}
 import scalatest.dcbstore.examples.ConcurrentWriterStore.Moment
+import scalatest.dcbstore.examples.ConcurrentWriterStore.Moment.BeforeRead
 import scalatest.dcbstore.examples.{ConcurrentWriterStore, ExampleSpec}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -234,3 +236,190 @@ class LibraryLoansSpec
 
     val result = LibraryLoansCommandHandler(store).handle(RenewLoan("c1")).futureValue
     result shouldBe Left(Rejected("Copy is not lent"))
+
+  it should "handle concurrency 1a" in :
+    // given (copyLent):
+    //   CopyAddedToCatalog("c1", "b1")
+    //   CopyLent("c1", "m1")
+    // given:
+    //   MemberSuspended("m1")
+    // when:
+    //   RenewLoan("c1")
+    // decision:
+    //   - before 1st read: MemberReinstated("m1")
+    //   - 1st read
+    //     - CopyLent(c1), CopyReturned(c1) -> borrowerId = m1
+    //     - CopyAddedToCatalog(c1) -> bookId = b1
+    //   - 2nd read
+    //     - CopyLent(c1), CopyReturned(c1) -> borrowerId
+    //     - CopyLent(c1), LoanRenewed(c1) -> renewals
+    //     - MemberSuspended(m1), MemberReinstated(m1) -> borrowerIsSuspended
+    //     - BookReserved(b1), ReservationCancelled(b1) -> bookReservations
+    //   - decision: member is not suspended -> renewal accepted
+    val underlying = lentCopy()
+    underlying.append(List(MemberSuspended("m1").toEvent)).futureValue
+    val store = ConcurrentWriterStore(underlying, List(MemberReinstated("m1").toEvent), BeforeRead(1))
+
+    val result = LibraryLoansCommandHandler(store).handle(RenewLoan("c1")).futureValue
+    val _ = result shouldBe Right(())
+    allEvents(underlying).last shouldBe LoanRenewed("c1").toEvent
+
+  it should "handle concurrency 1b" in :
+    // given (copyLent):
+    //   CopyAddedToCatalog("c1", "b1")
+    //   CopyLent("c1", "m1")
+    // given:
+    //   MemberSuspended("m1")
+    // when:
+    //   RenewLoan("c1")
+    // decision:
+    //   - 1st read
+    //     - CopyLent(c1), CopyReturned(c1) -> borrowerId = m1
+    //     - CopyAddedToCatalog(c1) -> bookId = b1
+    //   - before 2nd read: MemberReinstated("m1")
+    //   - 2nd read
+    //     - CopyLent(c1), CopyReturned(c1) -> borrowerId = (still m1)
+    //     - CopyLent(c1), LoanRenewed(c1) -> renewals
+    //     - MemberSuspended(m1), MemberReinstated(m1) -> borrowerIsSuspended
+    //     - BookReserved(b1), ReservationCancelled(b1) -> bookReservations
+    //   - decision: member is not suspended -> renewal accepted
+    val underlying = lentCopy()
+    underlying.append(List(MemberSuspended("m1").toEvent)).futureValue
+    val store = ConcurrentWriterStore(underlying, List(MemberReinstated("m1").toEvent), BeforeRead(2))
+
+    val result = LibraryLoansCommandHandler(store).handle(RenewLoan("c1")).futureValue
+    val _ = result shouldBe Right(())
+    allEvents(underlying).last shouldBe LoanRenewed("c1").toEvent
+
+  it should "handle concurrency 2a" in :
+    // given (copyLent):
+    //   CopyAddedToCatalog("c1", "b1")
+    //   CopyLent("c1", "m1")
+    // given:
+    //   MemberSuspended("m1")
+    // when:
+    //   RenewLoan("c1")
+    // decision:
+    //   - 1st read
+    //     - Any -> head
+    //   - before 2nd read: MemberReinstated("m1")
+    //   - 2nd read
+    //     - CopyLent(c1), CopyReturned(c1) -> borrowerId = m1
+    //     - CopyLent(c1), LoanRenewed(c1) -> renewals
+    //     - CopyAddedToCatalog(c1) -> bookId = b1
+    //   - 3r read
+    //     - MemberSuspended(m1), MemberReinstated(m1) -> borrowerIsSuspended
+    //     - BookReserved(b1), ReservationCancelled(b1) -> bookReservations
+    //   - decision: member is not suspended -> renewal accepted
+    //   - but appendconditionfailed, as concurrent MemberReinstated("m1") happened after head
+    // Assuming immediate retry due to optimistic locking:
+    //   - 1st read
+    //     - Any -> head
+    //   - 2nd read
+    //     - CopyLent(c1), CopyReturned(c1) -> borrowerId = b1
+    //     - CopyLent(c1), LoanRenewed(c1) -> renewals
+    //     - CopyAddedToCatalog(c1) -> bookId = m1
+    //   - 3r read
+    //     - MemberSuspended(m1), MemberReinstated(m1) -> borrowerIsSuspended
+    //     - BookReserved(b1), ReservationCancelled(b1) -> bookReservations
+    //   - decision: member is not suspended -> renewal accepted
+    //   - but appendconditionfailed, as MemberReinstated("m1") happened after head
+
+    val underlying = lentCopy()
+    underlying.append(List(MemberSuspended("m1").toEvent)).futureValue
+    val store = ConcurrentWriterStore(underlying, List(MemberReinstated("m1").toEvent), BeforeRead(2))
+
+    val _ = an[Exception] should be thrownBy LibraryLoansCommandHandler(store).handle2(RenewLoan("c1")).futureValue
+    val result = LibraryLoansCommandHandler(store).handle2(RenewLoan("c1")).futureValue
+    store.read(Query.all).futureValue.iterator.foreach(println)
+    Thread.sleep(100)
+    val _ = result shouldBe Right(())
+    allEvents(underlying).last shouldBe LoanRenewed("c1").toEvent
+
+  it should "handle concurrency 2b" in :
+    // given (copyLent):
+    //   CopyAddedToCatalog("c1", "b1")
+    //   CopyLent("c1", "m1")
+    // given:
+    //   MemberSuspended("m1")
+    // when:
+    //   RenewLoan("c1")
+    // decision:
+    //   - 1st read
+    //     - Any -> head
+    //   - 2nd read
+    //     - CopyLent(c1), CopyReturned(c1) -> borrowerId = m1
+    //     - CopyLent(c1), LoanRenewed(c1) -> renewals
+    //     - CopyAddedToCatalog(c1) -> bookId = b1
+    //   - before 3rd read: MemberReinstated("m1")
+    //   - 3r read
+    //     - MemberSuspended(m1), MemberReinstated(m1) -> borrowerIsSuspended
+    //     - BookReserved(b1), ReservationCancelled(b1) -> bookReservations
+    //   - decision: member is not suspended -> renewal accepted
+    //   - but appendconditionfailed, as concurrent MemberReinstated("m1") happened after head
+    // Assuming immediate retry due to optimistic locking:
+    //   - 1st read
+    //     - Any -> head
+    //   - 2nd read
+    //     - CopyLent(c1), CopyReturned(c1) -> borrowerId = m1
+    //     - CopyLent(c1), LoanRenewed(c1) -> renewals
+    //     - CopyAddedToCatalog(c1) -> bookId = m1
+    //   - 3r read
+    //     - MemberSuspended(m1), MemberReinstated(m1) -> borrowerIsSuspended
+    //     - BookReserved(b1), ReservationCancelled(b1) -> bookReservations
+    //   - decision: member is not suspended -> renewal accepted
+    //   - but appendconditionfailed, as MemberReinstated("m1") happened after head
+
+    val underlying = lentCopy()
+    underlying.append(List(MemberSuspended("m1").toEvent)).futureValue
+    val store = ConcurrentWriterStore(underlying, List(MemberReinstated("m1").toEvent), BeforeRead(3))
+
+    val _ = an[Exception] should be thrownBy LibraryLoansCommandHandler(store).handle2(RenewLoan("c1")).futureValue
+    val result = LibraryLoansCommandHandler(store).handle2(RenewLoan("c1")).futureValue
+    store.read(Query.all).futureValue.iterator.foreach(println)
+    Thread.sleep(100)
+    val _ = result shouldBe Right(())
+    allEvents(underlying).last shouldBe LoanRenewed("c1").toEvent
+
+  it should "handle concurrency 3b" in :
+    // given (copyLent):
+    //   CopyAddedToCatalog("c1", "b1")
+    //   CopyLent("c1", "m1")
+    // when:
+    //   RenewLoan("c1")
+    // decision:
+    //   - 1st read
+    //     - Any -> head
+    //   - 2nd read
+    //     - CopyLent(c1), CopyReturned(c1) -> borrowerId = m1
+    //     - CopyLent(c1), LoanRenewed(c1) -> renewals
+    //     - CopyAddedToCatalog(c1) -> bookId = b1
+    //   - before 3rd read: CopyReturned(c1, m1), CopyLent(c1, m2)
+    //   - 3r read
+    //     - MemberSuspended(m1), MemberReinstated(m1) -> borrowerIsSuspended
+    //     - BookReserved(b1), ReservationCancelled(b1) -> bookReservations
+    //   - decision: renewal accepted
+    //   - but appendconditionfailed, as concurrent CopyReturned(c1, m1), CopyLent(c1, m2) happened after head
+    // Assuming immediate retry due to optimistic locking:
+    //   - 1st read
+    //     - Any -> head
+    //   - 2nd read
+    //     - CopyLent(c1), CopyReturned(c1) -> borrowerId = m2 !!! not m1 as in the first try
+    //     - CopyLent(c1), LoanRenewed(c1) -> renewals
+    //     - CopyAddedToCatalog(c1) -> bookId = b1
+    //   - 3r read
+    //     - MemberSuspended(m1), MemberReinstated(m1) -> borrowerIsSuspended
+    //     - BookReserved(b1), ReservationCancelled(b1) -> bookReservations
+    //   - decision: renewal accepted
+    //   - but now book is renewed for m2 instead of m1
+
+    val underlying = lentCopy()
+    val concurrent = List(CopyReturned("c1", "m1").toEvent, CopyLent("c1", "m2").toEvent)
+    val store = ConcurrentWriterStore(underlying, concurrent, BeforeRead(3))
+
+    val _ = an[Exception] should be thrownBy LibraryLoansCommandHandler(store).handle2(RenewLoan("c1")).futureValue
+    val result = LibraryLoansCommandHandler(store).handle2(RenewLoan("c1")).futureValue
+    store.read(Query.all).futureValue.iterator.foreach(println)
+    Thread.sleep(100)
+    val _ = result shouldBe Right(())
+    allEvents(underlying).last shouldBe LoanRenewed("c1").toEvent

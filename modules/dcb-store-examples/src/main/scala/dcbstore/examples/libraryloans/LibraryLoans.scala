@@ -3,7 +3,7 @@ package dcbstore.examples.libraryloans
 import dcbstore.decisionmodel.*
 import dcbstore.decisionmodel.SingleProjection.handler
 import dcbstore.examples.{*, given}
-import dcbstore.{DcbStore, Event, Tags}
+import dcbstore.{AppendCondition, DcbStore, Event, Query, Tags}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -218,6 +218,41 @@ final class LibraryLoansCommandHandler(store: DcbStore[EventType, DataSuper])(us
             else Right(List(LoanRenewed(copyId).toEvent))
           appendIfAccepted(store)(decision, appendConditionO)
       case _ => Future.successful(Left(Rejected("Copy is not lent")))
+
+  // interpret head as the last sequence numbe of the store even before the first projection read
+  def handle2(command: RenewLoan): Future[Either[Rejected, Unit]] =
+    import command.*
+
+    val read1 = store.read(Query.all)
+    read1.flatMap: iterable =>
+      val head = iterable.iterator.toList.last.sequencePosition
+      val projections1 = (
+        borrowerId = copyBorrowerId(copyId),
+        renewals = copyRenewals(copyId),
+        bookId = copyBookId(copyId),
+      )
+      val read2 = store.buildReadModel(projections1)
+      read2.flatMap:
+        // A copy that is not in the catalog has no book, but cannot be lent either.
+        case (Some(borrowerId), renewals, Some(bookId)) =>
+          val projections2 = (
+            borrowerIsSuspended = memberIsSuspended(borrowerId),
+            bookReservations = bookReservations(bookId),
+          )
+          val read3 = store.buildReadModel(projections2)
+          read3.flatMap:
+            case (borrowerIsSuspended, bookReservations) =>
+            val decision =
+              if borrowerId.isEmpty then Left(Rejected("Copy is not lent"))
+              else if renewals >= MaxRenewalsPerLoan then Left(Rejected("Loan was already renewed twice"))
+              else if borrowerIsSuspended then Left(Rejected("Borrower is suspended"))
+              else if bookReservations.nonEmpty then Left(Rejected("Book is reserved"))
+              else Right(List(LoanRenewed(copyId).toEvent))
+            val aqOs: List[Option[Query[EventType]]] = projections1.toList.map(_.queryO) ++ projections2.toList.map(_.queryO)
+            val aqO = aqOs.flatten.reduceOption(_.merge(_))
+            val ac = AppendCondition(aqO.get, Some(head))
+            appendIfAccepted(store)(decision, Some(ac))
+        case _ => Future.successful(Left(Rejected("Perhaps copy is not lent")))
 
   def handle(command: SuspendMember): Future[Either[Rejected, Unit]] =
     import command.*
